@@ -2,19 +2,24 @@ import chalk from "chalk";
 import { format, parseISO, isPast } from "date-fns";
 import { withCollection } from "../collection.js";
 import { formatDuration, showError } from "../format.js";
-import type { TaskResult } from "../types.js";
+import { normalizeFrontmatter } from "../field-mapping.js";
+import type { TaskResult, TaskFrontmatter } from "../types.js";
 
 export async function statsCommand(
   options: { path?: string },
 ): Promise<void> {
   try {
-    await withCollection(async (collection) => {
+    await withCollection(async (collection, mapping) => {
       const result = await collection.query({
         types: ["task"],
         limit: 1000,
       });
 
-      const tasks = (result.results || []) as TaskResult[];
+      const rawTasks = (result.results || []) as TaskResult[];
+      const tasks = rawTasks.map((t) => ({
+        ...t,
+        frontmatter: normalizeFrontmatter(t.frontmatter as Record<string, unknown>, mapping) as any as TaskFrontmatter,
+      }));
       const total = tasks.length;
 
       if (total === 0) {

@@ -6,8 +6,8 @@ export async function deleteCommand(
   options: { path?: string; force?: boolean },
 ): Promise<void> {
   try {
-    await withCollection(async (collection) => {
-      const taskPath = await resolveTaskPath(collection, pathOrTitle);
+    await withCollection(async (collection, mapping) => {
+      const taskPath = await resolveTaskPath(collection, pathOrTitle, mapping);
 
       // Check backlinks unless forced
       if (!options.force) {

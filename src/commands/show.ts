@@ -1,5 +1,6 @@
 import { withCollection, resolveTaskPath } from "../collection.js";
 import { formatTaskDetail, showError } from "../format.js";
+import { normalizeFrontmatter } from "../field-mapping.js";
 import type { TaskResult } from "../types.js";
 
 export async function showCommand(
@@ -7,8 +8,8 @@ export async function showCommand(
   options: { path?: string },
 ): Promise<void> {
   try {
-    await withCollection(async (collection) => {
-      const taskPath = await resolveTaskPath(collection, pathOrTitle);
+    await withCollection(async (collection, mapping) => {
+      const taskPath = await resolveTaskPath(collection, pathOrTitle, mapping);
       const result = await collection.read(taskPath);
 
       if (result.error) {
@@ -16,9 +17,11 @@ export async function showCommand(
         process.exit(1);
       }
 
+      const fm = normalizeFrontmatter(result.frontmatter as Record<string, unknown>, mapping);
+
       const task: TaskResult = {
         path: taskPath,
-        frontmatter: result.frontmatter as any,
+        frontmatter: fm as any,
         body: result.body,
       };
 

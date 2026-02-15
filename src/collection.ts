@@ -1,5 +1,6 @@
 import { Collection } from "@callumalpass/mdbase";
 import { resolveCollectionPath } from "./config.js";
+import { type FieldMapping, loadFieldMapping, resolveField } from "./field-mapping.js";
 
 export async function openCollection(
   flagPath?: string,
@@ -13,12 +14,13 @@ export async function openCollection(
 }
 
 export async function withCollection<T>(
-  fn: (collection: Collection) => Promise<T>,
+  fn: (collection: Collection, mapping: FieldMapping) => Promise<T>,
   flagPath?: string,
 ): Promise<T> {
   const collection = await openCollection(flagPath);
+  const mapping = await loadFieldMapping(flagPath);
   try {
-    return await fn(collection);
+    return await fn(collection, mapping);
   } finally {
     await collection.close();
   }
@@ -27,16 +29,19 @@ export async function withCollection<T>(
 export async function resolveTaskPath(
   collection: Collection,
   pathOrTitle: string,
+  mapping: FieldMapping,
 ): Promise<string> {
   // If it looks like a path, use directly
   if (pathOrTitle.includes("/") || pathOrTitle.endsWith(".md")) {
     return pathOrTitle;
   }
 
+  const titleField = resolveField(mapping, "title");
+
   // Try exact title match
   const exact = await collection.query({
     types: ["task"],
-    where: `title == "${pathOrTitle.replace(/"/g, '\\"')}"`,
+    where: `${titleField} == "${pathOrTitle.replace(/"/g, '\\"')}"`,
     limit: 2,
   });
 
@@ -47,7 +52,7 @@ export async function resolveTaskPath(
   // Try contains match
   const fuzzy = await collection.query({
     types: ["task"],
-    where: `title.contains("${pathOrTitle.replace(/"/g, '\\"')}")`,
+    where: `${titleField}.contains("${pathOrTitle.replace(/"/g, '\\"')}")`,
     limit: 5,
   });
 

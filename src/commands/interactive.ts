@@ -4,8 +4,10 @@ import { withCollection } from "../collection.js";
 import { createParser } from "../nlp.js";
 import { mapToFrontmatter } from "../mapper.js";
 import { formatTask, showError, showSuccess } from "../format.js";
+import { denormalizeFrontmatter, normalizeFrontmatter } from "../field-mapping.js";
 import type { NaturalLanguageParserCore } from "tasknotes-nlp-core";
 import type { Collection } from "@callumalpass/mdbase";
+import type { FieldMapping } from "../field-mapping.js";
 import type { TaskResult } from "../types.js";
 
 let lastInput = "";
@@ -61,7 +63,7 @@ export async function interactiveCommand(
   try {
     const parser = await createParser(options.path);
 
-    await withCollection(async (collection) => {
+    await withCollection(async (collection, mapping) => {
       console.log(chalk.bold("mdbase-tasknotes Interactive Mode"));
       console.log(chalk.dim("Type a task description and press Enter to create"));
       console.log(chalk.dim("Press Ctrl+C to exit"));
@@ -94,16 +96,17 @@ export async function interactiveCommand(
 
           const result = await collection.create({
             type: "task",
-            frontmatter: frontmatter as Record<string, unknown>,
+            frontmatter: denormalizeFrontmatter(frontmatter as Record<string, unknown>, mapping),
             body,
           });
 
           if (result.error) {
             showError(`Failed to create task: ${result.error.message}`);
           } else {
+            const fm = normalizeFrontmatter(result.frontmatter as Record<string, unknown>, mapping);
             const task: TaskResult = {
               path: result.path!,
-              frontmatter: result.frontmatter as any,
+              frontmatter: fm as any,
             };
             showSuccess("Task created");
             console.log(formatTask(task));

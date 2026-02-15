@@ -3,6 +3,7 @@ import { withCollection } from "../collection.js";
 import { createParser } from "../nlp.js";
 import { mapToFrontmatter } from "../mapper.js";
 import { formatTask, showError, showSuccess } from "../format.js";
+import { denormalizeFrontmatter, normalizeFrontmatter } from "../field-mapping.js";
 import type { TaskResult } from "../types.js";
 
 export async function createCommand(
@@ -20,10 +21,10 @@ export async function createCommand(
     const parsed = parser.parseInput(input);
     const { frontmatter, body } = mapToFrontmatter(parsed);
 
-    await withCollection(async (collection) => {
+    await withCollection(async (collection, mapping) => {
       const result = await collection.create({
         type: "task",
-        frontmatter: frontmatter as Record<string, unknown>,
+        frontmatter: denormalizeFrontmatter(frontmatter as Record<string, unknown>, mapping),
         body,
       });
 
@@ -32,9 +33,11 @@ export async function createCommand(
         process.exit(1);
       }
 
+      const fm = normalizeFrontmatter(result.frontmatter as Record<string, unknown>, mapping);
+
       const task: TaskResult = {
         path: result.path!,
-        frontmatter: result.frontmatter as any,
+        frontmatter: fm as any,
       };
 
       showSuccess("Task created");

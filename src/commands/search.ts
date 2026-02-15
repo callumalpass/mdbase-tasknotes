@@ -2,6 +2,7 @@ import chalk from "chalk";
 import { withCollection } from "../collection.js";
 import { formatTask, showError } from "../format.js";
 import { extractProjectNames } from "../mapper.js";
+import { normalizeFrontmatter } from "../field-mapping.js";
 import type { TaskResult } from "../types.js";
 
 export async function searchCommand(
@@ -15,7 +16,7 @@ export async function searchCommand(
   }
 
   try {
-    await withCollection(async (collection) => {
+    await withCollection(async (collection, mapping) => {
       const result = await collection.query({
         types: ["task"],
         include_body: true,
@@ -27,13 +28,13 @@ export async function searchCommand(
       // Client-side full-text search
       const scored = tasks
         .map((task) => {
-          const fm = task.frontmatter;
+          const fm = normalizeFrontmatter(task.frontmatter as Record<string, unknown>, mapping);
           let score = 0;
 
-          const title = (fm.title || "").toLowerCase();
+          const title = ((fm.title as string) || "").toLowerCase();
           const body = (task.body || "").toLowerCase();
-          const tags = (fm.tags || []).join(" ").toLowerCase();
-          const contexts = (fm.contexts || []).join(" ").toLowerCase();
+          const tags = ((fm.tags as string[]) || []).join(" ").toLowerCase();
+          const contexts = ((fm.contexts as string[]) || []).join(" ").toLowerCase();
           const projects = extractProjectNames(fm.projects as string[] | undefined)
             .join(" ")
             .toLowerCase();
@@ -49,7 +50,7 @@ export async function searchCommand(
           // Body match
           if (body.includes(searchTerm)) score += 2;
 
-          return { task, score };
+          return { task: { ...task, frontmatter: fm as any }, score };
         })
         .filter(({ score }) => score > 0)
         .sort((a, b) => b.score - a.score);

@@ -1,5 +1,6 @@
 import { withCollection, resolveTaskPath } from "../collection.js";
 import { showError, showSuccess } from "../format.js";
+import { normalizeFrontmatter, denormalizeFrontmatter } from "../field-mapping.js";
 
 export async function updateCommand(
   pathOrTitle: string,
@@ -17,8 +18,8 @@ export async function updateCommand(
   },
 ): Promise<void> {
   try {
-    await withCollection(async (collection) => {
-      const taskPath = await resolveTaskPath(collection, pathOrTitle);
+    await withCollection(async (collection, mapping) => {
+      const taskPath = await resolveTaskPath(collection, pathOrTitle, mapping);
       const read = await collection.read(taskPath);
 
       if (read.error) {
@@ -26,7 +27,7 @@ export async function updateCommand(
         process.exit(1);
       }
 
-      const fm = read.frontmatter as Record<string, unknown>;
+      const fm = normalizeFrontmatter(read.frontmatter as Record<string, unknown>, mapping);
       const fields: Record<string, unknown> = {};
 
       if (options.status) fields.status = options.status;
@@ -70,7 +71,7 @@ export async function updateCommand(
 
       const result = await collection.update({
         path: taskPath,
-        fields,
+        fields: denormalizeFrontmatter(fields, mapping),
       });
 
       if (result.error) {

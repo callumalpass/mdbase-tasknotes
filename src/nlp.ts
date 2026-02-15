@@ -5,6 +5,7 @@ import {
   type PriorityConfig,
 } from "tasknotes-nlp-core";
 import { resolveCollectionPath } from "./config.js";
+import { buildFieldMapping } from "./field-mapping.js";
 
 export async function createParser(flagPath?: string): Promise<NaturalLanguageParserCore> {
   const collectionPath = resolveCollectionPath(flagPath);
@@ -21,12 +22,13 @@ export async function createParser(flagPath?: string): Promise<NaturalLanguagePa
   }
 
   const fields = typeResult.type.fields || {};
+  const mapping = buildFieldMapping(fields);
 
   // Build StatusConfig from status enum values
   const statusConfigs: StatusConfig[] = [];
-  const statusField = fields.status;
+  const statusField = fields[mapping.roleToField.status];
   if (statusField?.values) {
-    statusField.values.forEach((value, index) => {
+    statusField.values.forEach((value: string, index: number) => {
       const isCompleted =
         value.includes("done") ||
         value.includes("complete") ||
@@ -46,9 +48,9 @@ export async function createParser(flagPath?: string): Promise<NaturalLanguagePa
 
   // Build PriorityConfig from priority enum values
   const priorityConfigs: PriorityConfig[] = [];
-  const priorityField = fields.priority;
+  const priorityField = fields[mapping.roleToField.priority];
   if (priorityField?.values) {
-    priorityField.values.forEach((value, index) => {
+    priorityField.values.forEach((value: string, index: number) => {
       priorityConfigs.push({
         id: value,
         value,

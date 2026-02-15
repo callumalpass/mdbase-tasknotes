@@ -2,15 +2,16 @@ import chalk from "chalk";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { withCollection, resolveTaskPath } from "../collection.js";
 import { formatDuration, showError, showSuccess, showInfo } from "../format.js";
-import type { TimeEntry, TaskResult } from "../types.js";
+import { normalizeFrontmatter, denormalizeFrontmatter } from "../field-mapping.js";
+import type { TimeEntry, TaskResult, TaskFrontmatter } from "../types.js";
 
 export async function timerStartCommand(
   pathOrTitle: string,
   options: { path?: string; description?: string },
 ): Promise<void> {
   try {
-    await withCollection(async (collection) => {
-      const taskPath = await resolveTaskPath(collection, pathOrTitle);
+    await withCollection(async (collection, mapping) => {
+      const taskPath = await resolveTaskPath(collection, pathOrTitle, mapping);
       const read = await collection.read(taskPath);
 
       if (read.error) {
@@ -18,7 +19,7 @@ export async function timerStartCommand(
         process.exit(1);
       }
 
-      const fm = read.frontmatter as Record<string, unknown>;
+      const fm = normalizeFrontmatter(read.frontmatter as Record<string, unknown>, mapping);
       const entries: TimeEntry[] = Array.isArray(fm.timeEntries)
         ? [...(fm.timeEntries as TimeEntry[])]
         : [];
@@ -40,7 +41,7 @@ export async function timerStartCommand(
 
       const result = await collection.update({
         path: taskPath,
-        fields: { timeEntries: entries },
+        fields: denormalizeFrontmatter({ timeEntries: entries }, mapping),
       });
 
       if (result.error) {
@@ -60,15 +61,19 @@ export async function timerStopCommand(
   options: { path?: string },
 ): Promise<void> {
   try {
-    await withCollection(async (collection) => {
+    await withCollection(async (collection, mapping) => {
       // Find the task with a running timer
       const result = await collection.query({
         types: ["task"],
         limit: 200,
       });
 
-      const tasks = (result.results || []) as TaskResult[];
-      let found: { task: TaskResult; entryIndex: number } | null = null;
+      const rawTasks = (result.results || []) as TaskResult[];
+      const tasks = rawTasks.map((t) => ({
+        ...t,
+        frontmatter: normalizeFrontmatter(t.frontmatter as Record<string, unknown>, mapping) as any as TaskFrontmatter,
+      }));
+      let found: { task: typeof tasks[0]; entryIndex: number } | null = null;
 
       for (const task of tasks) {
         const entries = task.frontmatter.timeEntries || [];
@@ -100,7 +105,7 @@ export async function timerStopCommand(
 
       const updateResult = await collection.update({
         path: task.path,
-        fields: { timeEntries: entries },
+        fields: denormalizeFrontmatter({ timeEntries: entries }, mapping),
       });
 
       if (updateResult.error) {
@@ -120,13 +125,17 @@ export async function timerStatusCommand(
   options: { path?: string },
 ): Promise<void> {
   try {
-    await withCollection(async (collection) => {
+    await withCollection(async (collection, mapping) => {
       const result = await collection.query({
         types: ["task"],
         limit: 200,
       });
 
-      const tasks = (result.results || []) as TaskResult[];
+      const rawTasks = (result.results || []) as TaskResult[];
+      const tasks = rawTasks.map((t) => ({
+        ...t,
+        frontmatter: normalizeFrontmatter(t.frontmatter as Record<string, unknown>, mapping) as any as TaskFrontmatter,
+      }));
       let found = false;
 
       for (const task of tasks) {
@@ -156,13 +165,17 @@ export async function timerLogCommand(
   options: { path?: string; from?: string; to?: string; period?: string },
 ): Promise<void> {
   try {
-    await withCollection(async (collection) => {
+    await withCollection(async (collection, mapping) => {
       const result = await collection.query({
         types: ["task"],
         limit: 500,
       });
 
-      const tasks = (result.results || []) as TaskResult[];
+      const rawTasks = (result.results || []) as TaskResult[];
+      const tasks = rawTasks.map((t) => ({
+        ...t,
+        frontmatter: normalizeFrontmatter(t.frontmatter as Record<string, unknown>, mapping) as any as TaskFrontmatter,
+      }));
 
       // Collect all time entries across tasks
       const allEntries: Array<{
