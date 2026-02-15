@@ -52,6 +52,7 @@ export function buildTaskTypeDef(opts: InitOptions = {}): string {
   lines.push("  title:");
   lines.push("    type: string");
   lines.push("    required: true");
+  lines.push("    tn_role: title");
 
   // status
   lines.push("  status:");
@@ -59,62 +60,76 @@ export function buildTaskTypeDef(opts: InitOptions = {}): string {
   lines.push("    required: true");
   lines.push(`    values: [${o.statuses.join(", ")}]`);
   lines.push(`    default: ${o.defaultStatus}`);
+  lines.push("    tn_role: status");
 
   // priority
   lines.push("  priority:");
   lines.push("    type: enum");
   lines.push(`    values: [${o.priorities.join(", ")}]`);
   lines.push(`    default: ${o.defaultPriority}`);
+  lines.push("    tn_role: priority");
 
   // date fields
   lines.push("  due:");
   lines.push("    type: date");
+  lines.push("    tn_role: due");
   lines.push("  scheduled:");
   lines.push("    type: date");
+  lines.push("    tn_role: scheduled");
   lines.push("  completedDate:");
   lines.push("    type: date");
+  lines.push("    tn_role: completedDate");
 
   // list fields
   lines.push("  tags:");
   lines.push("    type: list");
   lines.push("    items:");
   lines.push("      type: string");
+  lines.push("    tn_role: tags");
   lines.push("  contexts:");
   lines.push("    type: list");
   lines.push("    items:");
   lines.push("      type: string");
+  lines.push("    tn_role: contexts");
   lines.push("  projects:");
   lines.push("    type: list");
   lines.push("    items:");
   lines.push("      type: link");
   lines.push('    description: "Wikilinks to related project notes."');
+  lines.push("    tn_role: projects");
 
   // time estimate
   lines.push("  timeEstimate:");
   lines.push("    type: integer");
   lines.push("    min: 0");
   lines.push('    description: "Estimated time in minutes."');
+  lines.push("    tn_role: timeEstimate");
 
   // timestamps
   lines.push("  dateCreated:");
   lines.push("    type: datetime");
   lines.push("    required: true");
   lines.push('    generated: "now"');
+  lines.push("    tn_role: dateCreated");
   lines.push("  dateModified:");
   lines.push("    type: datetime");
   lines.push('    generated: "now_on_write"');
+  lines.push("    tn_role: dateModified");
 
   // recurrence
   lines.push("  recurrence:");
   lines.push("    type: string");
+  lines.push("    tn_role: recurrence");
   lines.push("  recurrenceAnchor:");
   lines.push("    type: enum");
   lines.push("    values: [scheduled, completion]");
   lines.push("    default: scheduled");
+  lines.push("    tn_role: recurrenceAnchor");
 
   // time entries
   lines.push("  timeEntries:");
   lines.push("    type: list");
+  lines.push("    tn_role: timeEntries");
   lines.push("    items:");
   lines.push("      type: object");
   lines.push("      fields:");
