@@ -1,0 +1,27 @@
+{
+  "name": "mdbase-tasknotes",
+  "version": "0.1.0",
+  "description": "Standalone CLI for managing markdown tasks via mdbase",
+  "type": "module",
+  "bin": {
+    "mtn": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "start": "node dist/cli.js"
+  },
+  "dependencies": {
+    "@callumalpass/mdbase": "file:../mdbase",
+    "tasknotes-nlp-core": "file:../tasknotes-nlp-core",
+    "commander": "^12.1.0",
+    "chalk": "^4.1.2",
+    "date-fns": "^4.1.0",
+    "ora": "^5.4.1"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.5.0",
+    "@types/node": "^20.0.0"
+  }
+}
