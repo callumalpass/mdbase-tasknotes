@@ -3,23 +3,41 @@
   "version": "0.1.0",
   "description": "Standalone CLI for managing markdown tasks via mdbase",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/callumalpass/mdbase-tasknotes.git"
+  },
+  "keywords": [
+    "mdbase",
+    "tasks",
+    "cli",
+    "markdown",
+    "task-management",
+    "natural-language",
+    "productivity"
+  ],
   "bin": {
     "mtn": "./dist/cli.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "start": "node dist/cli.js"
+    "start": "node dist/cli.js",
+    "prepublishOnly": "tsup"
   },
   "dependencies": {
-    "@callumalpass/mdbase": "file:../mdbase",
-    "tasknotes-nlp-core": "file:../tasknotes-nlp-core",
+    "@callumalpass/mdbase": "^0.2.1",
     "commander": "^12.1.0",
     "chalk": "^4.1.2",
     "date-fns": "^4.1.0",
     "ora": "^5.4.1"
   },
   "devDependencies": {
+    "tasknotes-nlp-core": "^0.1.0",
     "tsup": "^8.0.0",
     "typescript": "^5.5.0",
     "@types/node": "^20.0.0"
