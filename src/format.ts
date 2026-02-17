@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { format as fmtDate, isPast, parseISO } from "date-fns";
+import { format as fmtDate, isPast, parseISO, differenceInMinutes } from "date-fns";
 import type { TaskFrontmatter, TaskResult } from "./types.js";
 import { extractProjectNames } from "./mapper.js";
 import { getCurrentDateString, isSameDateSafe, parseDateToLocal } from "./date.js";
@@ -184,7 +184,9 @@ function formatTaskDetailInternal(task: TaskResult, asOfDate: string): string {
     for (const entry of fm.timeEntries) {
       const start = entry.startTime ? fmtDate(parseISO(entry.startTime), "yyyy-MM-dd HH:mm") : "?";
       const end = entry.endTime ? fmtDate(parseISO(entry.endTime), "HH:mm") : "running";
-      const dur = entry.duration ? ` (${formatDuration(entry.duration)})` : "";
+      const dur = entry.endTime
+        ? ` (${formatDuration(differenceInMinutes(parseISO(entry.endTime), parseISO(entry.startTime)))})`
+        : "";
       lines.push(`    ${start} → ${end}${dur}`);
     }
   }

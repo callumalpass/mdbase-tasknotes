@@ -2,7 +2,7 @@ import chalk from "chalk";
 import { format, parseISO, differenceInMinutes } from "date-fns";
 import { withCollection, resolveTaskPath } from "../collection.js";
 import { formatDuration, showError, showSuccess, showInfo } from "../format.js";
-import { normalizeFrontmatter, denormalizeFrontmatter } from "../field-mapping.js";
+import { normalizeFrontmatter, denormalizeFrontmatter, resolveDisplayTitle } from "../field-mapping.js";
 import { getCurrentDateString } from "../date.js";
 import type { TimeEntry, TaskResult, TaskFrontmatter } from "../types.js";
 
@@ -101,7 +101,6 @@ export async function timerStopCommand(
       entries[entryIndex] = {
         ...entry,
         endTime: endTime.toISOString(),
-        duration,
       };
 
       const updateResult = await collection.update({
@@ -145,7 +144,7 @@ export async function timerStatusCommand(
         if (running) {
           const elapsed = differenceInMinutes(new Date(), parseISO(running.startTime));
           console.log(
-            `${chalk.green("●")} ${task.frontmatter.title} — ${formatDuration(elapsed)} elapsed` +
+            `${chalk.green("●")} ${resolveDisplayTitle(task.frontmatter, mapping) || task.path} — ${formatDuration(elapsed)} elapsed` +
               (running.description ? chalk.dim(` (${running.description})`) : ""),
           );
           found = true;
@@ -190,7 +189,7 @@ export async function timerLogCommand(
         for (const entry of entries) {
           if (!entry.endTime) continue; // Skip running timers
           allEntries.push({
-            taskTitle: task.frontmatter.title,
+            taskTitle: resolveDisplayTitle(task.frontmatter, mapping) || task.path,
             taskPath: task.path,
             entry,
           });
@@ -229,7 +228,9 @@ export async function timerLogCommand(
         const end = entry.endTime
           ? format(parseISO(entry.endTime), "HH:mm")
           : "running";
-        const dur = entry.duration || 0;
+        const dur = entry.endTime
+          ? differenceInMinutes(parseISO(entry.endTime), parseISO(entry.startTime))
+          : 0;
         totalMinutes += dur;
 
         console.log(

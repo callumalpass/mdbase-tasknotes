@@ -23,7 +23,6 @@ export interface TimeEntry {
   startTime: string;
   endTime?: string;
   description?: string;
-  duration?: number;
 }
 
 export interface TaskResult {

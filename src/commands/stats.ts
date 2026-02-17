@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import { parseISO, differenceInMinutes } from "date-fns";
 import { withCollection } from "../collection.js";
 import { formatDuration, showError } from "../format.js";
 import { normalizeFrontmatter, isCompletedStatus } from "../field-mapping.js";
@@ -59,7 +60,7 @@ export async function statsCommand(
       for (const task of tasks) {
         const entries = task.frontmatter.timeEntries || [];
         for (const entry of entries) {
-          if (entry.duration) totalMinutes += entry.duration;
+          if (entry.endTime) totalMinutes += differenceInMinutes(parseISO(entry.endTime), parseISO(entry.startTime));
         }
       }
 
