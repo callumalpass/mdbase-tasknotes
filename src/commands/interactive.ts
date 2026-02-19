@@ -3,11 +3,10 @@ import chalk from "chalk";
 import { withCollection } from "../collection.js";
 import { createParser } from "../nlp.js";
 import { mapToFrontmatter } from "../mapper.js";
-import { formatTask, showError, showSuccess } from "../format.js";
-import { denormalizeFrontmatter, normalizeFrontmatter } from "../field-mapping.js";
+import { formatTask, showError, showSuccess, showWarning } from "../format.js";
+import { normalizeFrontmatter } from "../field-mapping.js";
+import { createTaskWithCompat } from "../create-compat.js";
 import type { NaturalLanguageParserCore } from "tasknotes-nlp-core";
-import type { Collection } from "@callumalpass/mdbase";
-import type { FieldMapping } from "../field-mapping.js";
 import type { TaskResult } from "../types.js";
 
 let lastInput = "";
@@ -94,11 +93,18 @@ export async function interactiveCommand(
           const parsed = parser.parseInput(trimmed);
           const { frontmatter, body } = mapToFrontmatter(parsed);
 
-          const result = await collection.create({
-            type: "task",
-            frontmatter: denormalizeFrontmatter(frontmatter as Record<string, unknown>, mapping),
+          const result = await createTaskWithCompat(
+            collection,
+            mapping,
+            frontmatter as Record<string, unknown>,
             body,
-          });
+          );
+
+          if (result.warnings && result.warnings.length > 0) {
+            for (const warning of result.warnings) {
+              showWarning(warning);
+            }
+          }
 
           if (result.error) {
             showError(`Failed to create task: ${result.error.message}`);
