@@ -1,6 +1,6 @@
 {
   "name": "mdbase-tasknotes",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Standalone CLI for managing markdown tasks via mdbase",
   "type": "module",
   "license": "MIT",

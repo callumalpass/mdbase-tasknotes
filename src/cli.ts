@@ -25,7 +25,7 @@ const program = new Command();
 program
   .name("mtn")
   .description("Standalone CLI for managing markdown tasks via mdbase")
-  .version("0.1.0")
+  .version("0.1.2")
   .option("-p, --path <path>", "Path to mdbase collection");
 
 // Init
