@@ -67,7 +67,6 @@ export async function timerStopCommand(
       // Find the task with a running timer
       const result = await collection.query({
         types: ["task"],
-        limit: 200,
       });
 
       const rawTasks = (result.results || []) as TaskResult[];
@@ -130,7 +129,6 @@ export async function timerStatusCommand(
     await withCollection(async (collection, mapping) => {
       const result = await collection.query({
         types: ["task"],
-        limit: 200,
       });
 
       const rawTasks = (result.results || []) as TaskResult[];
@@ -171,7 +169,6 @@ export async function timerLogCommand(
     await withCollection(async (collection, mapping) => {
       const result = await collection.query({
         types: ["task"],
-        limit: 500,
       });
 
       const rawTasks = (result.results || []) as TaskResult[];
