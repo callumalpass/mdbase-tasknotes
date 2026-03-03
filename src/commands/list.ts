@@ -24,6 +24,8 @@ export async function listCommand(options: {
 }): Promise<void> {
   try {
     const asOfDate = options.on ? validateDateString(options.on) : resolveDateOrToday();
+    const requestedTag = typeof options.tag === "string" ? options.tag.trim().toLowerCase() : "";
+    const wantsArchivedTag = requestedTag === "archive" || requestedTag === "archived";
     await withCollection(async (collection, mapping) => {
       // Build where expression from flags
       const conditions: string[] = [];
@@ -57,6 +59,11 @@ export async function listCommand(options: {
 
         if (options.tag) {
           conditions.push(`${tagsField}.contains("${options.tag}")`);
+        }
+
+        if (!options.status && !options.overdue && !wantsArchivedTag) {
+          conditions.push(`!${tagsField}.contains("archive")`);
+          conditions.push(`!${tagsField}.contains("archived")`);
         }
 
         if (options.due) {
