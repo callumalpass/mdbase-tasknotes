@@ -20,7 +20,9 @@ export function mapToFrontmatter(parsed: ParsedTaskData): {
   if (parsed.tags && parsed.tags.length > 0) fm.tags = parsed.tags;
   if (parsed.contexts && parsed.contexts.length > 0) fm.contexts = parsed.contexts;
   if (parsed.projects && parsed.projects.length > 0) {
-    fm.projects = parsed.projects.map((p) => `[[projects/${p}]]`);
+    fm.projects = parsed.projects.map((p) =>
+      p.startsWith('[[') && p.endsWith(']]') ? p : `[[projects/${p}]]`
+    );
   }
   if (parsed.recurrence) fm.recurrence = parsed.recurrence;
   if (parsed.estimate) fm.timeEstimate = parsed.estimate;
