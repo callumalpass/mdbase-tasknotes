@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Fixed project wikilink mapping so existing wikilinks are not double-wrapped. Thanks @waspeer (#9).
+- Fixed `~` expansion for configured collection paths, environment paths, and `--path` values. Thanks @anomatomato (#7).
+- Fixed `mtn list --due` so natural-language date expressions like `tomorrow` and `May 13 2026` are resolved before filtering. Thanks @npondel (#11).
+- Added hour/minute support for `mtn timer log --from` and `--to` filters, including `YYYY-MM-DD HH:mm` and `YYYY-MM-DDTHH:mm`. Thanks @anomatomato (#8).
+
 ## 0.1.2 - 2026-02-19
 
 - Fixed timer log/stat output to compute duration dynamically and use robust display title fallback.

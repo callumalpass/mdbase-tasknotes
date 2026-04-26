@@ -9,6 +9,7 @@ import {
 } from "../field-mapping.js";
 import type { TaskResult } from "../types.js";
 import { isBeforeDateSafe, resolveDateOrToday, validateDateString } from "../date.js";
+import { resolveDueDateExpression } from "../nlp.js";
 
 export async function listCommand(options: {
   path?: string;
@@ -24,6 +25,9 @@ export async function listCommand(options: {
 }): Promise<void> {
   try {
     const asOfDate = options.on ? validateDateString(options.on) : resolveDateOrToday();
+    const dueDate = options.due && !options.where
+      ? await resolveDueDateExpression(options.due, options.path)
+      : undefined;
     const requestedTag = typeof options.tag === "string" ? options.tag.trim().toLowerCase() : "";
     const wantsArchivedTag = requestedTag === "archive" || requestedTag === "archived";
     await withCollection(async (collection, mapping) => {
@@ -66,8 +70,8 @@ export async function listCommand(options: {
           conditions.push(`!${tagsField}.contains("archived")`);
         }
 
-        if (options.due) {
-          conditions.push(`${dueField} == "${options.due}"`);
+        if (dueDate) {
+          conditions.push(`${dueField} == "${dueDate}"`);
         }
 
         if (options.overdue) {

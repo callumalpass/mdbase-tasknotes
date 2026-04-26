@@ -47,11 +47,27 @@ export function getConfigPath(): string {
   return CONFIG_FILE;
 }
 
+export function resolveUserPath(userPath: string): string {
+  return path.resolve(expandHomeDirectory(userPath));
+}
+
 export function resolveCollectionPath(flagPath?: string): string {
-  if (flagPath) return path.resolve(flagPath);
+  if (flagPath) return resolveUserPath(flagPath);
   const envPath = process.env.MDBASE_TASKNOTES_PATH;
-  if (envPath) return path.resolve(envPath);
+  if (envPath) return resolveUserPath(envPath);
   const config = load();
-  if (config.collectionPath) return path.resolve(config.collectionPath);
+  if (config.collectionPath) return resolveUserPath(config.collectionPath);
   return process.cwd();
+}
+
+function expandHomeDirectory(userPath: string): string {
+  if (userPath === "~") {
+    return os.homedir();
+  }
+
+  if (userPath.startsWith("~/") || userPath.startsWith("~\\")) {
+    return path.join(os.homedir(), userPath.slice(2));
+  }
+
+  return userPath;
 }

@@ -7,6 +7,7 @@ import {
   getCurrentDateString,
   resolveDateOrToday,
   validateDateString,
+  resolveDateTimeRangeBound,
   hasTimeComponent,
   getDatePart,
   isSameDateSafe,
@@ -240,5 +241,40 @@ test("date conformance: parse/format/compare matrix", async (t) => {
 
   await t.test("formatDateForStorage uses UTC date fields", () => {
     assert.equal(formatDateForStorage(utcDate(2026, 2, 20)), "2026-02-20");
+  });
+
+  await t.test("resolveDateTimeRangeBound accepts local date-only ranges", () => {
+    assert.equal(
+      resolveDateTimeRangeBound("2026-02-22", "from").getTime(),
+      new Date(2026, 1, 22, 0, 0, 0, 0).getTime(),
+    );
+    assert.equal(
+      resolveDateTimeRangeBound("2026-02-22", "to").getTime(),
+      new Date(2026, 1, 22, 23, 59, 59, 999).getTime(),
+    );
+  });
+
+  await t.test("resolveDateTimeRangeBound accepts minute-precision datetime ranges", () => {
+    assert.equal(
+      resolveDateTimeRangeBound("2026-02-22 21:11", "from").getTime(),
+      new Date(2026, 1, 22, 21, 11, 0, 0).getTime(),
+    );
+    assert.equal(
+      resolveDateTimeRangeBound("2026-02-22T21:11", "to").getTime(),
+      new Date(2026, 1, 22, 21, 11, 59, 999).getTime(),
+    );
+  });
+
+  await t.test("resolveDateTimeRangeBound accepts timezone datetime ranges", () => {
+    assert.equal(
+      resolveDateTimeRangeBound("2026-02-22T21:11:30Z", "to").toISOString(),
+      "2026-02-22T21:11:30.999Z",
+    );
+  });
+
+  await t.test("resolveDateTimeRangeBound rejects invalid ranges", () => {
+    assert.throws(() => resolveDateTimeRangeBound("2026-02-29 21:11", "from"));
+    assert.throws(() => resolveDateTimeRangeBound("2026-02-22 24:00", "from"));
+    assert.throws(() => resolveDateTimeRangeBound("not a date", "to"));
   });
 });

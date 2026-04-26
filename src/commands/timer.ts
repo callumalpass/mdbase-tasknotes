@@ -3,7 +3,7 @@ import { format, parseISO, differenceInMinutes } from "date-fns";
 import { withCollection, resolveTaskPath } from "../collection.js";
 import { formatDuration, showError, showSuccess, showInfo } from "../format.js";
 import { normalizeFrontmatter, denormalizeFrontmatter, resolveDisplayTitle } from "../field-mapping.js";
-import { getCurrentDateString } from "../date.js";
+import { getCurrentDateString, resolveDateTimeRangeBound } from "../date.js";
 import type { TimeEntry, TaskResult, TaskFrontmatter } from "../types.js";
 
 export async function timerStartCommand(
@@ -199,10 +199,18 @@ export async function timerLogCommand(
       // Filter by date range
       let filtered = allEntries;
       if (options.from) {
-        filtered = filtered.filter((e) => e.entry.startTime >= options.from!);
+        const fromTime = resolveDateTimeRangeBound(options.from, "from").getTime();
+        filtered = filtered.filter((e) => {
+          const startTime = parseISO(e.entry.startTime).getTime();
+          return !Number.isNaN(startTime) && startTime >= fromTime;
+        });
       }
       if (options.to) {
-        filtered = filtered.filter((e) => e.entry.startTime <= options.to! + "T23:59:59");
+        const toTime = resolveDateTimeRangeBound(options.to, "to").getTime();
+        filtered = filtered.filter((e) => {
+          const startTime = parseISO(e.entry.startTime).getTime();
+          return !Number.isNaN(startTime) && startTime <= toTime;
+        });
       }
       if (options.period === "today") {
         const today = getCurrentDateString();

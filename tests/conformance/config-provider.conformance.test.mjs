@@ -54,6 +54,7 @@ test("config/provider conformance: resolveCollectionPath precedence matrix", asy
   mod.setConfig("collectionPath", tmpCollection);
 
   const originalEnv = process.env.MDBASE_TASKNOTES_PATH;
+  const originalHome = process.env.HOME;
   const originalCwd = process.cwd();
   const cwdA = mkdtempSync(join(tmpdir(), "mtn-cwd-a-"));
   const cwdB = mkdtempSync(join(tmpdir(), "mtn-cwd-b-"));
@@ -91,6 +92,8 @@ test("config/provider conformance: resolveCollectionPath precedence matrix", asy
   ];
 
   try {
+    process.env.HOME = home;
+
     for (const c of cases) {
       await t.test(c.name, () => {
         if (c.clearConfig) {
@@ -142,9 +145,35 @@ test("config/provider conformance: resolveCollectionPath precedence matrix", asy
         }
       }
     }
+
+    await t.test("expands home directory in flag path", () => {
+      mod.setConfig("collectionPath", tmpCollection);
+      process.env.MDBASE_TASKNOTES_PATH = join(cwdA, "env");
+      process.chdir(cwdA);
+
+      assert.equal(mod.resolveCollectionPath("~/flag"), resolve(join(home, "flag")));
+    });
+
+    await t.test("expands home directory in env path", () => {
+      mod.setConfig("collectionPath", tmpCollection);
+      process.env.MDBASE_TASKNOTES_PATH = "~/env";
+      process.chdir(cwdA);
+
+      assert.equal(mod.resolveCollectionPath(undefined), resolve(join(home, "env")));
+    });
+
+    await t.test("expands home directory in config path", () => {
+      mod.setConfig("collectionPath", "~/configured");
+      delete process.env.MDBASE_TASKNOTES_PATH;
+      process.chdir(cwdA);
+
+      assert.equal(mod.resolveCollectionPath(undefined), resolve(join(home, "configured")));
+    });
   } finally {
     if (originalEnv === undefined) delete process.env.MDBASE_TASKNOTES_PATH;
     else process.env.MDBASE_TASKNOTES_PATH = originalEnv;
+    if (originalHome === undefined) delete process.env.HOME;
+    else process.env.HOME = originalHome;
     process.chdir(originalCwd);
   }
 });

@@ -5,6 +5,7 @@ import {
   type PriorityConfig,
 } from "tasknotes-nlp-core";
 import { resolveCollectionPath } from "./config.js";
+import { validateDateString } from "./date.js";
 import { buildFieldMapping } from "./field-mapping.js";
 
 export async function createParser(flagPath?: string): Promise<NaturalLanguageParserCore> {
@@ -60,4 +61,36 @@ export async function createParser(flagPath?: string): Promise<NaturalLanguagePa
   }
 
   return new NaturalLanguageParserCore(statusConfigs, priorityConfigs, true, "en");
+}
+
+export async function resolveDueDateExpression(input: string, flagPath?: string): Promise<string> {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    throw new Error("Due date cannot be empty.");
+  }
+
+  try {
+    return validateDateString(trimmed);
+  } catch {
+    // Fall through to natural-language parsing.
+  }
+
+  const parser = await createParser(flagPath);
+  const direct = parser.parseInput(trimmed);
+  if (direct.dueDate) {
+    return validateDateString(direct.dueDate);
+  }
+
+  const forcedDue = parser.parseInput(`due ${trimmed}`);
+  if (forcedDue.dueDate) {
+    return validateDateString(forcedDue.dueDate);
+  }
+
+  if (direct.scheduledDate) {
+    return validateDateString(direct.scheduledDate);
+  }
+
+  throw new Error(
+    `Could not parse due date "${input}". Try YYYY-MM-DD or a natural-language date like "tomorrow".`,
+  );
 }
