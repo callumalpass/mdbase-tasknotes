@@ -36,3 +36,37 @@ test('core flow: init/create/list/complete/stats', () => {
   assert.match(clean, /Total tasks:\s+3/);
   assert.match(clean, /Completion rate:\s+33%/);
 });
+
+test('create: parses standalone scheduled and start NLP triggers', () => {
+  const collectionPath = makeTempDir('mtn-nlp-scheduled-');
+
+  let result = runCli(['init', collectionPath]);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+
+  result = runCli([
+    'create',
+    '--path',
+    collectionPath,
+    'Write report scheduled 2026-05-01 due 2026-05-13',
+  ]);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+
+  result = runCli([
+    'create',
+    '--path',
+    collectionPath,
+    'Draft outline start 2026-06-01 due 2026-06-13',
+  ]);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+
+  result = runCli(['list', '--path', collectionPath, '--json']);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+
+  const listed = JSON.parse(result.stdout);
+  const byTitle = new Map(listed.map((task) => [task.title, task]));
+
+  assert.equal(byTitle.get('Write report')?.scheduled, '2026-05-01');
+  assert.equal(byTitle.get('Write report')?.due, '2026-05-13');
+  assert.equal(byTitle.get('Draft outline')?.scheduled, '2026-06-01');
+  assert.equal(byTitle.get('Draft outline')?.due, '2026-06-13');
+});
