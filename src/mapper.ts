@@ -20,9 +20,7 @@ export function mapToFrontmatter(parsed: ParsedTaskData): {
   if (parsed.tags && parsed.tags.length > 0) fm.tags = parsed.tags;
   if (parsed.contexts && parsed.contexts.length > 0) fm.contexts = parsed.contexts;
   if (parsed.projects && parsed.projects.length > 0) {
-    fm.projects = parsed.projects.map((p) =>
-      p.startsWith('[[') && p.endsWith(']]') ? p : `[[projects/${p}]]`
-    );
+    fm.projects = parsed.projects.map(toProjectWikilink);
   }
   if (parsed.recurrence) fm.recurrence = parsed.recurrence;
   if (parsed.estimate) fm.timeEstimate = parsed.estimate;
@@ -30,6 +28,15 @@ export function mapToFrontmatter(parsed: ParsedTaskData): {
   const body = parsed.details || undefined;
 
   return { frontmatter: fm, body };
+}
+
+function toProjectWikilink(project: string): string {
+  const trimmed = project.trim();
+  return isWikilink(trimmed) ? trimmed : `[[projects/${trimmed}]]`;
+}
+
+function isWikilink(value: string): boolean {
+  return /^\[\[[^\]]+\]\]$/.test(value);
 }
 
 /**
