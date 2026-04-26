@@ -1,6 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { runCli, makeTempDir, stripAnsi } from './helpers.mjs';
+
+const packageVersion = JSON.parse(
+  readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+).version;
+
+test('cli: version matches package metadata', () => {
+  const result = runCli(['--version']);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.equal(result.stdout.trim(), packageVersion);
+});
 
 test('core flow: init/create/list/complete/stats', () => {
   const collectionPath = makeTempDir('mtn-core-');

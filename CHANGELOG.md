@@ -7,6 +7,7 @@
 - Fixed `mtn list --due` so natural-language date expressions like `tomorrow` and `May 13 2026` are resolved before filtering. Thanks @npondel (#11).
 - Added hour/minute support for `mtn timer log --from` and `--to` filters, including `YYYY-MM-DD HH:mm` and `YYYY-MM-DDTHH:mm`. Thanks @anomatomato (#8).
 - Improved the create error and documentation when a task type has `match.path_glob` but no `path_pattern`. Thanks @tparsons9 (#2).
+- Fixed `mtn --version` so it reports the package version instead of a hardcoded stale value. Thanks @plashal (#5) and @anomatomato (#6).
 
 ## 0.1.2 - 2026-02-19
 
