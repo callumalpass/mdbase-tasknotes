@@ -130,7 +130,6 @@ export function buildTaskTypeDef(opts: InitOptions = {}): string {
   lines.push("  recurrenceAnchor:");
   lines.push("    type: enum");
   lines.push("    values: [scheduled, completion]");
-  lines.push("    default: scheduled");
   lines.push("    tn_role: recurrenceAnchor");
   lines.push("  completeInstances:");
   lines.push("    type: list");
