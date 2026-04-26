@@ -62,6 +62,15 @@ export async function createTaskWithCompat(
     new Date(),
   );
   if (!pathResolution.path) {
+    if (pathResolution.errorMessage) {
+      return {
+        ...firstAttempt,
+        error: {
+          ...firstAttempt.error,
+          message: pathResolution.errorMessage,
+        },
+      };
+    }
     if (pathResolution.missingKeys && pathResolution.missingKeys.length > 0) {
       const missing = pathResolution.missingKeys.join(", ");
       return {
@@ -179,9 +188,11 @@ function derivePathFromType(
   frontmatter: UnknownRecord,
   mapping: FieldMapping,
   now: Date,
-): { path?: string; missingKeys?: string[]; template?: string } {
+): { path?: string; missingKeys?: string[]; template?: string; errorMessage?: string } {
   if (!taskType || typeof taskType.path_pattern !== "string" || taskType.path_pattern.trim().length === 0) {
-    return {};
+    return {
+      errorMessage: buildMissingPathPatternMessage(taskType),
+    };
   }
 
   const values = buildTemplateValues(frontmatter, mapping, now);
@@ -193,6 +204,38 @@ function derivePathFromType(
     template: taskType.path_pattern,
     missingKeys: renderedPattern.missingKeys,
   };
+}
+
+function buildMissingPathPatternMessage(taskType: TaskTypeDefLike | undefined): string {
+  const pathGlob = readString(taskType?.match?.path_glob);
+  if (!pathGlob) {
+    return [
+      "Cannot create task because the task type does not define path_pattern.",
+      "Add path_pattern to _types/task.md to tell mtn where new task files should be written.",
+    ].join(" ");
+  }
+
+  const suggestion = suggestPathPatternFromGlob(pathGlob);
+  return [
+    `Cannot create task because _types/task.md defines match.path_glob "${pathGlob}" but no path_pattern.`,
+    "match.path_glob only identifies existing files; it is not a template for creating new files.",
+    `Add path_pattern to tell mtn where to write new tasks, for example: ${suggestion}.`,
+  ].join(" ");
+}
+
+function suggestPathPatternFromGlob(pathGlob: string): string {
+  const normalized = normalizeRelativePath(pathGlob);
+  const withoutGlob = normalized
+    .replace(/\*\*\/\*\.md$/u, "{{titleKebab}}.md")
+    .replace(/\*\.md$/u, "{{titleKebab}}.md")
+    .replace(/\*\*$/u, "{{titleKebab}}.md")
+    .replace(/\*$/u, "{{titleKebab}}.md");
+
+  const suggestion = withoutGlob === normalized || withoutGlob.length === 0
+    ? "tasks/{{titleKebab}}.md"
+    : withoutGlob;
+
+  return `path_pattern: "${suggestion}"`;
 }
 
 function renderTemplate(

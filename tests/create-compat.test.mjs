@@ -206,3 +206,30 @@ test("create: warns with exact missing template variables when path_pattern cann
   assert.match(output, /missing template values for mystery/);
   assert.match(output, /Failed to create task:/);
 });
+
+test("create: explains path_glob is not a creation template when path_pattern is missing", () => {
+  const collectionPath = makeTempDir("mtn-create-compat-path-glob-");
+  writeCollection(collectionPath, [
+    "---",
+    "name: task",
+    "match:",
+    '  path_glob: "calendar/{{year}}/{{month}}-{{monthNameShort}}/**/*.md"',
+    "fields:",
+    "  title:",
+    "    type: string",
+    "    required: true",
+    "  status:",
+    "    type: enum",
+    "    values: [open, done]",
+    "    default: open",
+    "---",
+    "",
+  ].join("\n"));
+
+  const result = runCli(["create", "--path", collectionPath, "Glob template test"]);
+  const output = stripAnsi(`${result.stdout}\n${result.stderr}`);
+  assert.equal(result.status, 1, output);
+  assert.match(output, /match\.path_glob only identifies existing files/);
+  assert.match(output, /not a template for creating new files/);
+  assert.match(output, /path_pattern: "calendar\/\{\{year\}\}\/\{\{month\}\}-\{\{monthNameShort\}\}\/\{\{titleKebab\}\}\.md"/);
+});

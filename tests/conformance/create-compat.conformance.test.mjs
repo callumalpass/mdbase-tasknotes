@@ -236,6 +236,29 @@ test("create-compat conformance: missing template variable diagnostics", async (
   }
 });
 
+test("create-compat conformance: missing path_pattern diagnostics", async (t) => {
+  await t.test("explains path_glob cannot create a path", async () => {
+    const { collection, calls } = makeCompatCollection({
+      fields: {
+        title: { type: "string", required: true },
+      },
+      match: {
+        path_glob: "calendar/{{year}}/**/*.md",
+      },
+    });
+
+    const result = await createTaskWithCompat(collection, MAPPING, {
+      title: "Needs path pattern",
+    });
+
+    assert.ok(result.error);
+    assert.equal(calls.length, 1);
+    assert.match(result.error.message, /match\.path_glob/);
+    assert.match(result.error.message, /not a template for creating new files/);
+    assert.match(result.error.message, /path_pattern:/);
+  });
+});
+
 test("create-compat conformance: passthrough behavior when create does not return path_required", async (t) => {
   const passthroughErrors = ["validation_error", "unknown", "permission_denied", "already_exists"]; 
 

@@ -91,6 +91,22 @@ Resolved in order:
 
 If you use the [TaskNotes](https://github.com/callumalpass/tasknotes) Obsidian plugin with mdbase spec generation enabled, `mtn` works directly on your vault — point it at your vault root and it will read the same `mdbase.yaml` and `_types/task.md` the plugin generates. Tasks created by either tool are visible to both.
 
+## Creating Tasks With Custom Paths
+
+`match.path_glob` and `path_pattern` do different jobs in `_types/task.md`:
+
+- `match.path_glob` tells mdbase which existing files should be treated as tasks.
+- `path_pattern` tells `mtn create` where to write a new task file.
+
+If your task type only has `match.path_glob`, listing existing tasks can work, but creating a new task without an explicit path cannot choose a filename. Add `path_pattern` for creation:
+
+```yaml
+path_pattern: "calendar/{{year}}/{{month}}-{{monthNameShort}}/{{titleKebab}}.md"
+
+match:
+  path_glob: "calendar/**/*.md"
+```
+
 ## License
 
 MIT
