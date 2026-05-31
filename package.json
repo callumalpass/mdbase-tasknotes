@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@callumalpass/mdbase": "^0.2.2",
+    "@tasknotes/model": "file:../tasknotes-model",
     "chalk": "^4.1.2",
     "commander": "^12.1.0",
     "date-fns": "^4.1.0",

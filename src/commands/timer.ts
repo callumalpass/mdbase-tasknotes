@@ -1,5 +1,13 @@
 import chalk from "chalk";
-import { format, parseISO, differenceInMinutes } from "date-fns";
+import { format, parseISO } from "date-fns";
+import {
+  buildSpecStartTimeTrackingUpdate,
+  buildSpecStopTimeTrackingUpdate,
+} from "@tasknotes/model/operations";
+import {
+  calculateElapsedTimeEntryMinutes,
+  getActiveTimeEntry,
+} from "@tasknotes/model/time";
 import { withCollection, resolveTaskPath } from "../collection.js";
 import { formatDuration, showError, showSuccess, showInfo } from "../format.js";
 import { normalizeFrontmatter, denormalizeFrontmatter, resolveDisplayTitle } from "../field-mapping.js";
@@ -21,28 +29,22 @@ export async function timerStartCommand(
       }
 
       const fm = normalizeFrontmatter(read.frontmatter as Record<string, unknown>, mapping);
-      const entries: TimeEntry[] = Array.isArray(fm.timeEntries)
-        ? [...(fm.timeEntries as TimeEntry[])]
-        : [];
-
-      // Check for already-running timer
-      const running = entries.find((e) => e.startTime && !e.endTime);
+      const running = getActiveTimeEntry({ timeEntries: fm.timeEntries as TimeEntry[] | undefined });
       if (running) {
         showError(`Timer already running since ${running.startTime}. Stop it first.`);
         process.exit(1);
       }
 
-      const newEntry: TimeEntry = {
-        startTime: new Date().toISOString(),
-      };
-      if (options.description) {
-        newEntry.description = options.description;
-      }
-      entries.push(newEntry);
+      const plan = buildSpecStartTimeTrackingUpdate({
+        frontmatter: fm,
+        currentTimestamp: new Date().toISOString(),
+        description: options.description,
+        path: taskPath,
+      });
 
       const result = await collection.update({
         path: taskPath,
-        fields: denormalizeFrontmatter({ timeEntries: entries }, mapping),
+        fields: denormalizeFrontmatter(plan.fields, mapping),
       });
 
       if (result.error) {
@@ -77,9 +79,9 @@ export async function timerStopCommand(
       let found: { task: typeof tasks[0]; entryIndex: number } | null = null;
 
       for (const task of tasks) {
-        const entries = task.frontmatter.timeEntries || [];
-        const idx = entries.findIndex((e) => e.startTime && !e.endTime);
-        if (idx !== -1) {
+        const activeEntry = getActiveTimeEntry({ timeEntries: task.frontmatter.timeEntries });
+        if (activeEntry) {
+          const idx = task.frontmatter.timeEntries?.findIndex((entry) => entry.startTime === activeEntry.startTime && !entry.endTime) ?? -1;
           found = { task, entryIndex: idx };
           break;
         }
@@ -91,21 +93,21 @@ export async function timerStopCommand(
       }
 
       const { task, entryIndex } = found;
-      const entries = [...(task.frontmatter.timeEntries || [])];
-      const entry = entries[entryIndex];
-
-      const endTime = new Date();
-      const startTime = parseISO(entry.startTime);
-      const duration = differenceInMinutes(endTime, startTime);
-
-      entries[entryIndex] = {
-        ...entry,
-        endTime: endTime.toISOString(),
-      };
+      const stopTimestamp = new Date().toISOString();
+      const plan = buildSpecStopTimeTrackingUpdate({
+        frontmatter: task.frontmatter as unknown as Record<string, unknown>,
+        currentTimestamp: stopTimestamp,
+        stopTimestamp,
+        path: task.path,
+      });
+      const stoppedEntry = plan.updatedTask.timeEntries?.[entryIndex];
+      const duration = stoppedEntry
+        ? calculateElapsedTimeEntryMinutes(stoppedEntry, stopTimestamp)
+        : 0;
 
       const updateResult = await collection.update({
         path: task.path,
-        fields: denormalizeFrontmatter({ timeEntries: entries }, mapping),
+        fields: denormalizeFrontmatter(plan.fields, mapping),
       });
 
       if (updateResult.error) {
@@ -139,10 +141,9 @@ export async function timerStatusCommand(
       let found = false;
 
       for (const task of tasks) {
-        const entries = task.frontmatter.timeEntries || [];
-        const running = entries.find((e) => e.startTime && !e.endTime);
+        const running = getActiveTimeEntry({ timeEntries: task.frontmatter.timeEntries });
         if (running) {
-          const elapsed = differenceInMinutes(new Date(), parseISO(running.startTime));
+          const elapsed = calculateElapsedTimeEntryMinutes(running);
           const taskTitle = resolveDisplayTitle(task.frontmatter, mapping, task.path) || task.path;
           console.log(
             `${chalk.green("●")} ${taskTitle} — ${formatDuration(elapsed)} elapsed` +
@@ -236,9 +237,7 @@ export async function timerLogCommand(
         const end = entry.endTime
           ? format(parseISO(entry.endTime), "HH:mm")
           : "running";
-        const dur = entry.endTime
-          ? differenceInMinutes(parseISO(entry.endTime), parseISO(entry.startTime))
-          : 0;
+        const dur = entry.endTime ? calculateElapsedTimeEntryMinutes(entry) : 0;
         totalMinutes += dur;
 
         console.log(

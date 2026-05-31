@@ -1,3 +1,4 @@
+import { buildSpecCompleteTaskUpdate } from "@tasknotes/model/operations";
 import { withCollection, resolveTaskPath } from "../collection.js";
 import { showError, showSuccess } from "../format.js";
 import {
@@ -7,7 +8,6 @@ import {
   isCompletedStatus,
   resolveDisplayTitle,
 } from "../field-mapping.js";
-import { completeRecurringTask } from "../recurrence.js";
 import { resolveDateOrToday, resolveOperationTargetDate } from "../date.js";
 
 export async function completeCommand(
@@ -40,43 +40,24 @@ export async function completeCommand(
           typeof fm.scheduled === "string" ? fm.scheduled : undefined,
           typeof fm.due === "string" ? fm.due : undefined,
         );
-        const completeInstances = Array.isArray(fm.completeInstances)
-          ? (fm.completeInstances as string[])
-          : [];
-        if (completeInstances.includes(targetDate)) {
+        const plan = buildSpecCompleteTaskUpdate({
+          frontmatter: fm,
+          targetDate,
+          completedStatus: completionStatus,
+          path: taskPath,
+        });
+        if (!plan.changed) {
           showSuccess(`Recurring instance already completed on ${targetDate}: ${taskTitle}`);
           return;
         }
 
-        const recurring = completeRecurringTask({
-          recurrence: fm.recurrence as string,
-          recurrenceAnchor:
-            typeof fm.recurrenceAnchor === "string" ? fm.recurrenceAnchor : undefined,
-          scheduled: typeof fm.scheduled === "string" ? fm.scheduled : undefined,
-          due: typeof fm.due === "string" ? fm.due : undefined,
-          dateCreated: typeof fm.dateCreated === "string" ? fm.dateCreated : undefined,
-          completionDate: targetDate,
-          completeInstances: Array.isArray(fm.completeInstances)
-            ? (fm.completeInstances as string[])
-            : undefined,
-          skippedInstances: Array.isArray(fm.skippedInstances)
-            ? (fm.skippedInstances as string[])
-            : undefined,
-        });
-
-        if (!recurring.nextScheduled) {
+        const nextScheduled = typeof plan.metadata?.nextScheduled === "string"
+          ? plan.metadata.nextScheduled
+          : undefined;
+        if (!nextScheduled) {
           const result = await collection.update({
             path: taskPath,
-            fields: denormalizeFrontmatter(
-              {
-                status: completionStatus,
-                completedDate: targetDate,
-                recurrence: recurring.updatedRecurrence,
-                completeInstances: recurring.completeInstances,
-                skippedInstances: recurring.skippedInstances,
-              },
-              mapping,
-            ),
+            fields: denormalizeFrontmatter(plan.fields, mapping),
           });
 
           if (result.error) {
@@ -88,20 +69,9 @@ export async function completeCommand(
           return;
         }
 
-        const fields: Record<string, unknown> = {
-          recurrence: recurring.updatedRecurrence,
-          scheduled: recurring.nextScheduled,
-          completeInstances: recurring.completeInstances,
-          skippedInstances: recurring.skippedInstances,
-        };
-
-        if (recurring.nextDue) {
-          fields.due = recurring.nextDue;
-        }
-
         const result = await collection.update({
           path: taskPath,
-          fields: denormalizeFrontmatter(fields, mapping),
+          fields: denormalizeFrontmatter(plan.fields, mapping),
         });
 
         if (result.error) {
@@ -109,18 +79,21 @@ export async function completeCommand(
           process.exit(1);
         }
 
-        showSuccess(`Completed recurring instance: ${taskTitle} → next ${recurring.nextScheduled}`);
+        showSuccess(`Completed recurring instance: ${taskTitle} → next ${nextScheduled}`);
         return;
       }
 
       const today = resolveDateOrToday(options.date);
+      const plan = buildSpecCompleteTaskUpdate({
+        frontmatter: fm,
+        targetDate: today,
+        completedStatus: completionStatus,
+        path: taskPath,
+      });
 
       const result = await collection.update({
         path: taskPath,
-        fields: denormalizeFrontmatter({
-          status: completionStatus,
-          completedDate: today,
-        }, mapping),
+        fields: denormalizeFrontmatter(plan.fields, mapping),
       });
 
       if (result.error) {

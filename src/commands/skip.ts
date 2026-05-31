@@ -1,7 +1,7 @@
+import { buildSpecRecurringSkipUpdate } from "@tasknotes/model/operations";
 import { withCollection, resolveTaskPath } from "../collection.js";
 import { showError, showSuccess } from "../format.js";
 import { normalizeFrontmatter, denormalizeFrontmatter, resolveDisplayTitle } from "../field-mapping.js";
-import { recalculateRecurringSchedule } from "../recurrence.js";
 import { resolveOperationTargetDate } from "../date.js";
 
 export async function skipCommand(
@@ -44,55 +44,22 @@ async function setSkipState(
         typeof fm.scheduled === "string" ? fm.scheduled : undefined,
         typeof fm.due === "string" ? fm.due : undefined,
       );
-      const completeInstances = Array.isArray(fm.completeInstances)
-        ? (fm.completeInstances as string[])
-        : [];
-      const skippedInstances = Array.isArray(fm.skippedInstances)
-        ? (fm.skippedInstances as string[])
-        : [];
-
-      const alreadySkipped = skippedInstances.includes(targetDate);
-      if (options.skip && alreadySkipped) {
-        showSuccess(`Recurring instance already skipped on ${targetDate}: ${taskTitle}`);
-        return;
-      }
-      if (!options.skip && !alreadySkipped) {
-        showSuccess(`Recurring instance already unskipped on ${targetDate}: ${taskTitle}`);
-        return;
-      }
-
-      const nextSkippedInstances = options.skip
-        ? [...skippedInstances, targetDate]
-        : skippedInstances.filter((d) => d !== targetDate);
-      const nextCompleteInstances = completeInstances.filter((d) => d !== targetDate);
-
-      const schedule = recalculateRecurringSchedule({
-        recurrence: fm.recurrence,
-        recurrenceAnchor:
-          typeof fm.recurrenceAnchor === "string" ? fm.recurrenceAnchor : undefined,
-        scheduled: typeof fm.scheduled === "string" ? fm.scheduled : undefined,
-        due: typeof fm.due === "string" ? fm.due : undefined,
-        dateCreated: typeof fm.dateCreated === "string" ? fm.dateCreated : undefined,
-        completeInstances: nextCompleteInstances,
-        skippedInstances: nextSkippedInstances,
-        referenceDate: targetDate,
+      const plan = buildSpecRecurringSkipUpdate({
+        frontmatter: fm,
+        targetDate,
+        skip: options.skip,
+        path: taskPath,
       });
-
-      const fields: Record<string, unknown> = {
-        recurrence: schedule.updatedRecurrence,
-        completeInstances: nextCompleteInstances,
-        skippedInstances: nextSkippedInstances,
-      };
-      if (schedule.nextScheduled) {
-        fields.scheduled = schedule.nextScheduled;
-      }
-      if (schedule.nextDue) {
-        fields.due = schedule.nextDue;
+      if (!plan.changed) {
+        showSuccess(
+          `Recurring instance already ${options.skip ? "skipped" : "unskipped"} on ${targetDate}: ${taskTitle}`,
+        );
+        return;
       }
 
       const result = await collection.update({
         path: taskPath,
-        fields: denormalizeFrontmatter(fields, mapping),
+        fields: denormalizeFrontmatter(plan.fields, mapping),
       });
 
       if (result.error) {
@@ -101,7 +68,10 @@ async function setSkipState(
       }
 
       const verb = options.skip ? "Skipped" : "Unskipped";
-      const nextInfo = schedule.nextScheduled ? ` → next ${schedule.nextScheduled}` : "";
+      const nextScheduled = typeof plan.metadata?.nextScheduled === "string"
+        ? plan.metadata.nextScheduled
+        : undefined;
+      const nextInfo = nextScheduled ? ` → next ${nextScheduled}` : "";
       showSuccess(`${verb} recurring instance (${targetDate}): ${taskTitle}${nextInfo}`);
     }, options.path);
   } catch (err) {

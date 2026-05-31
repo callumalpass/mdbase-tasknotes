@@ -1,6 +1,10 @@
 import { createRequire } from "node:module";
 import { dirname, posix as posixPath, resolve as resolvePath } from "node:path";
 import {
+  buildSpecStartTimeTrackingUpdate,
+  buildSpecStopTimeTrackingUpdate,
+} from "@tasknotes/model/operations";
+import {
   parseDateToUTC,
   parseDateToLocal,
   validateDateString,
@@ -1402,10 +1406,14 @@ function executeTimeStart(input: unknown): Envelope {
   } catch (error) {
     return envelopeErr(error);
   }
-  const nowIso = now.toISOString();
   const normalizedNowIso = canonicalInstant(now);
+  const plan = buildSpecStartTimeTrackingUpdate({
+    frontmatter: { timeEntries: entries },
+    currentTimestamp: normalizedNowIso,
+    startTimestamp: normalizedNowIso,
+  });
   return envelopeOk({
-    value: [...entries, { startTime: normalizedNowIso }],
+    value: plan.fields.timeEntries,
     dateModified: normalizedNowIso,
   });
 }
@@ -1437,11 +1445,14 @@ function executeTimeStop(input: unknown): Envelope {
     return envelopeErr("invalid_time_range");
   }
 
-  const next = [...entries];
-  next[activeIndex] = { ...next[activeIndex], endTime: nowIso };
+  const plan = buildSpecStopTimeTrackingUpdate({
+    frontmatter: { timeEntries: entries },
+    currentTimestamp: nowIso,
+    stopTimestamp: nowIso,
+  });
 
   return envelopeOk({
-    value: next,
+    value: plan.fields.timeEntries,
     dateModified: nowIso,
   });
 }
