@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.0-rc.1 - 2026-07-19
+
 - Generate mdbase v0.3 collections and canonical JSON Schema task types while
   continuing to read existing v0.2 TaskNotes collections.
 - Normalize v0.3 collection metadata, TaskNotes field roles, lifecycle fields,

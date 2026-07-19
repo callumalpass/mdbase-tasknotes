@@ -1,6 +1,6 @@
 {
   "name": "mdbase-tasknotes",
-  "version": "0.1.3",
+  "version": "0.2.0-rc.1",
   "description": "Standalone CLI for managing markdown tasks via mdbase",
   "type": "module",
   "license": "MIT",
@@ -36,11 +36,12 @@
     "start": "node dist/cli.js",
     "test": "npm run build && node --test tests/**/*.test.mjs",
     "test:tz-parity": "npm run build && ./scripts/test-tz-parity.sh",
+    "test:package": "npm run build && node scripts/smoke-package.mjs",
     "prepublishOnly": "tsup"
   },
   "dependencies": {
-    "@callumalpass/mdbase": "file:../mdbase",
-    "@tasknotes/model": "file:../tasknotes-model",
+    "@callumalpass/mdbase": "0.3.0-rc.1",
+    "@tasknotes/model": "0.3.0-rc.1",
     "chalk": "^4.1.2",
     "commander": "^12.1.0",
     "date-fns": "^4.1.0",
@@ -53,5 +54,8 @@
     "tasknotes-nlp-core": "^0.1.2",
     "tsup": "^8.0.0",
     "typescript": "^5.5.0"
+  },
+  "overrides": {
+    "esbuild": "0.28.1"
   }
 }
