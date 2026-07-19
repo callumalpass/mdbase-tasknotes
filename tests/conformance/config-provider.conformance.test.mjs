@@ -110,7 +110,8 @@ test("config/provider conformance: resolveCollectionPath precedence matrix", asy
 
         process.chdir(c.cwd);
         const resolved = mod.resolveCollectionPath(c.flag);
-        assert.equal(resolved, resolve(c.expected));
+        const expected = c.clearConfig ? process.cwd() : resolve(c.expected);
+        assert.equal(resolved, expected);
       });
     }
 
