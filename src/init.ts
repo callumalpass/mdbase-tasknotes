@@ -1,5 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { SUPPORTED_SPEC_VERSION } from "@callumalpass/mdbase";
+import YAML from "yaml";
 import { resolveUserPath } from "./config.js";
 
 export interface InitOptions {
@@ -19,17 +21,16 @@ const DEFAULTS: Required<InitOptions> = {
 };
 
 export function buildMdbaseYaml(): string {
-  return [
-    'spec_version: "0.2.0"',
-    'name: "TaskNotes"',
-    'description: "Task collection managed by mdbase-tasknotes"',
-    "settings:",
-    '  types_folder: "_types"',
-    "  default_strict: false",
-    "  exclude:",
-    '    - "_types"',
-    "",
-  ].join("\n");
+  return YAML.stringify({
+    spec_version: SUPPORTED_SPEC_VERSION,
+    name: "TaskNotes",
+    description: "Task collection managed by mdbase-tasknotes",
+    settings: {
+      types_folder: "_types",
+      validation: "warn",
+      explicit_type_keys: ["type", "types"],
+    },
+  }, { lineWidth: 0 });
 }
 
 export function buildTaskTypeDef(opts: InitOptions = {}): string {
@@ -38,135 +39,112 @@ export function buildTaskTypeDef(opts: InitOptions = {}): string {
     const lower = s.toLowerCase();
     return lower.includes("done") || lower.includes("complete") || lower.includes("cancel");
   });
-  const lines: string[] = [];
+  const roleNames = [
+    "title", "status", "priority", "due", "scheduled", "completedDate",
+    "tags", "contexts", "projects", "timeEstimate", "dateCreated",
+    "dateModified", "recurrence", "recurrenceAnchor", "completeInstances",
+    "skippedInstances", "timeEntries",
+  ];
+  const fieldRoles = Object.fromEntries(roleNames.map((role) => [role, role]));
+  const dateArray = { type: "array", items: { type: "string", format: "date" } };
+  const frontmatter = {
+    kind: "mdbase.type",
+    name: "task",
+    version: 1,
+    description: "A task managed by mdbase-tasknotes.",
+    match: { path_glob: `${o.tasksFolder}/**/*.md` },
+    schema: {
+      dialect: "json-schema-2020-12",
+      value: {
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        type: "object",
+        additionalProperties: true,
+        required: ["type", "title", "status", "dateCreated"],
+        properties: {
+          type: { const: "task" },
+          title: { type: "string", minLength: 1 },
+          status: { enum: o.statuses, default: o.defaultStatus },
+          priority: { enum: o.priorities, default: o.defaultPriority },
+          due: { type: "string", format: "date" },
+          scheduled: { type: "string", format: "date" },
+          completedDate: { type: "string", format: "date" },
+          tags: { type: "array", items: { type: "string" } },
+          contexts: { type: "array", items: { type: "string" } },
+          projects: {
+            type: "array",
+            items: { type: "string" },
+            description: "Wikilinks to related project notes.",
+          },
+          timeEstimate: {
+            type: "integer",
+            minimum: 0,
+            description: "Estimated time in minutes.",
+          },
+          dateCreated: { type: "string", format: "date-time" },
+          dateModified: { type: "string", format: "date-time" },
+          recurrence: { type: "string" },
+          recurrenceAnchor: { enum: ["scheduled", "completion"] },
+          completeInstances: dateArray,
+          skippedInstances: dateArray,
+          timeEntries: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: true,
+              properties: {
+                startTime: { type: "string", format: "date-time" },
+                endTime: { type: "string", format: "date-time" },
+                description: { type: "string" },
+                duration: { type: "integer" },
+              },
+            },
+          },
+        },
+      },
+    },
+    collection: {
+      display: { name_field: "title" },
+      read_defaults: {
+        status: o.defaultStatus,
+        priority: o.defaultPriority,
+      },
+      links: {
+        "projects[]": { target_type: "any", validate_exists: false },
+      },
+      path: { pattern: `${o.tasksFolder}/{title}.md` },
+    },
+    lifecycle: {
+      on_create: {
+        set: {
+          dateCreated: { now: true },
+          dateModified: { now: true },
+        },
+      },
+      on_update: { set: { dateModified: { now: true } } },
+    },
+    "x-tasknotes": {
+      contract: "tasknotes.task",
+      version: 1,
+      field_roles: fieldRoles,
+      status: {
+        completed_values: completedStatuses,
+        default: o.defaultStatus,
+      },
+      priority: { default: o.defaultPriority },
+      archive: { tags_field: "tags", archived_tag: "archived" },
+    },
+  };
 
-  lines.push("---");
-  lines.push("name: task");
-  lines.push("description: A task managed by mdbase-tasknotes.");
-  lines.push("display_name_key: title");
-  lines.push("strict: false");
-  lines.push("");
-  lines.push(`path_pattern: "${o.tasksFolder}/{title}.md"`);
-  lines.push("");
-  lines.push("match:");
-  lines.push(`  path_glob: "${o.tasksFolder}/**/*.md"`);
-  lines.push("");
-  lines.push("fields:");
-
-  // title
-  lines.push("  title:");
-  lines.push("    type: string");
-  lines.push("    required: true");
-  lines.push("    tn_role: title");
-
-  // status
-  lines.push("  status:");
-  lines.push("    type: enum");
-  lines.push("    required: true");
-  lines.push(`    values: [${o.statuses.join(", ")}]`);
-  lines.push(`    default: ${o.defaultStatus}`);
-  lines.push("    tn_role: status");
-  if (completedStatuses.length > 0) {
-    lines.push(`    tn_completed_values: [${completedStatuses.join(", ")}]`);
-  }
-
-  // priority
-  lines.push("  priority:");
-  lines.push("    type: enum");
-  lines.push(`    values: [${o.priorities.join(", ")}]`);
-  lines.push(`    default: ${o.defaultPriority}`);
-  lines.push("    tn_role: priority");
-
-  // date fields
-  lines.push("  due:");
-  lines.push("    type: date");
-  lines.push("    tn_role: due");
-  lines.push("  scheduled:");
-  lines.push("    type: date");
-  lines.push("    tn_role: scheduled");
-  lines.push("  completedDate:");
-  lines.push("    type: date");
-  lines.push("    tn_role: completedDate");
-
-  // list fields
-  lines.push("  tags:");
-  lines.push("    type: list");
-  lines.push("    items:");
-  lines.push("      type: string");
-  lines.push("    tn_role: tags");
-  lines.push("  contexts:");
-  lines.push("    type: list");
-  lines.push("    items:");
-  lines.push("      type: string");
-  lines.push("    tn_role: contexts");
-  lines.push("  projects:");
-  lines.push("    type: list");
-  lines.push("    items:");
-  lines.push("      type: link");
-  lines.push('    description: "Wikilinks to related project notes."');
-  lines.push("    tn_role: projects");
-
-  // time estimate
-  lines.push("  timeEstimate:");
-  lines.push("    type: integer");
-  lines.push("    min: 0");
-  lines.push('    description: "Estimated time in minutes."');
-  lines.push("    tn_role: timeEstimate");
-
-  // timestamps
-  lines.push("  dateCreated:");
-  lines.push("    type: datetime");
-  lines.push("    required: true");
-  lines.push('    generated: "now"');
-  lines.push("    tn_role: dateCreated");
-  lines.push("  dateModified:");
-  lines.push("    type: datetime");
-  lines.push('    generated: "now_on_write"');
-  lines.push("    tn_role: dateModified");
-
-  // recurrence
-  lines.push("  recurrence:");
-  lines.push("    type: string");
-  lines.push("    tn_role: recurrence");
-  lines.push("  recurrenceAnchor:");
-  lines.push("    type: enum");
-  lines.push("    values: [scheduled, completion]");
-  lines.push("    tn_role: recurrenceAnchor");
-  lines.push("  completeInstances:");
-  lines.push("    type: list");
-  lines.push("    items:");
-  lines.push("      type: date");
-  lines.push("    tn_role: completeInstances");
-  lines.push("  skippedInstances:");
-  lines.push("    type: list");
-  lines.push("    items:");
-  lines.push("      type: date");
-  lines.push("    tn_role: skippedInstances");
-
-  // time entries
-  lines.push("  timeEntries:");
-  lines.push("    type: list");
-  lines.push("    tn_role: timeEntries");
-  lines.push("    items:");
-  lines.push("      type: object");
-  lines.push("      fields:");
-  lines.push("        startTime:");
-  lines.push("          type: datetime");
-  lines.push("        endTime:");
-  lines.push("          type: datetime");
-  lines.push("        description:");
-  lines.push("          type: string");
-  lines.push("        duration:");
-  lines.push("          type: integer");
-
-  lines.push("---");
-  lines.push("");
-  lines.push("# Task");
-  lines.push("");
-  lines.push("Type definition for tasks managed by mdbase-tasknotes.");
-  lines.push("");
-
-  return lines.join("\n");
+  return [
+    "---",
+    YAML.stringify(frontmatter, { lineWidth: 0 }).trimEnd(),
+    "---",
+    "",
+    "# Task",
+    "",
+    "Type definition for tasks managed by mdbase-tasknotes.",
+    "",
+  ].join("\n");
 }
 
 export async function initCollection(targetPath: string): Promise<{ created: string[] }> {

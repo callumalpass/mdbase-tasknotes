@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Generate mdbase v0.3 collections and canonical JSON Schema task types while
+  continuing to read existing v0.2 TaskNotes collections.
+- Normalize v0.3 collection metadata, TaskNotes field roles, lifecycle fields,
+  enum values, and path templates into the CLI's compatibility model.
+- Use portable structured filters for CLI-generated queries and support the
+  v0.3 `file.name` binding.
+- Update `yaml` to a patched release and clear all production dependency
+  advisories.
 - Fixed project wikilink mapping so existing wikilinks are not double-wrapped. Thanks @waspeer (#9).
 - Fixed `~` expansion for configured collection paths, environment paths, and `--path` values. Thanks @anomatomato (#7).
 - Fixed `mtn list --due` so natural-language date expressions like `tomorrow` and `May 13 2026` are resolved before filtering. Thanks @npondel (#11).

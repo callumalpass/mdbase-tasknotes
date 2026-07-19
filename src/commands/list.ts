@@ -32,7 +32,7 @@ export async function listCommand(options: {
     const wantsArchivedTag = requestedTag === "archive" || requestedTag === "archived";
     await withCollection(async (collection, mapping) => {
       // Build where expression from flags
-      const conditions: string[] = [];
+      const conditions: Array<string | Record<string, unknown>> = [];
 
       if (options.where) {
         // Raw user-supplied expression — NOT translated
@@ -47,43 +47,45 @@ export async function listCommand(options: {
 
         if (options.status && !options.on) {
           if (!isCompletedStatus(mapping, options.status)) {
-            conditions.push(`${statusField} == "${options.status}"`);
+            conditions.push({ [statusField]: { eq: options.status } });
           }
         } else if (!options.overdue) {
           // Default: non-completed tasks. Recurring tasks are handled in post-filtering.
           for (const status of completedStatuses) {
-            const escaped = status.replace(/"/g, '\\"');
-            conditions.push(`${statusField} != "${escaped}"`);
+            conditions.push({ [statusField]: { neq: status } });
           }
         }
 
         if (options.priority) {
-          conditions.push(`${priorityField} == "${options.priority}"`);
+          conditions.push({ [priorityField]: { eq: options.priority } });
         }
 
         if (options.tag) {
-          conditions.push(`${tagsField}.contains("${options.tag}")`);
+          conditions.push({ [tagsField]: { contains: options.tag } });
         }
 
         if (!options.status && !options.overdue && !wantsArchivedTag) {
-          conditions.push(`!${tagsField}.contains("archive")`);
-          conditions.push(`!${tagsField}.contains("archived")`);
+          conditions.push({ not: { [tagsField]: { contains: "archive" } } });
+          conditions.push({ not: { [tagsField]: { contains: "archived" } } });
         }
 
         if (dueDate) {
-          conditions.push(`${dueField} == "${dueDate}"`);
+          conditions.push({ [dueField]: { eq: dueDate } });
         }
 
         if (options.overdue) {
-          conditions.push(`${dueField} != null`);
+          conditions.push({ [dueField]: { exists: true } });
           for (const status of completedStatuses) {
-            const escaped = status.replace(/"/g, '\\"');
-            conditions.push(`${statusField} != "${escaped}"`);
+            conditions.push({ [statusField]: { neq: status } });
           }
         }
       }
 
-      const where = conditions.length > 0 ? conditions.join(" && ") : undefined;
+      const where = conditions.length === 0
+        ? undefined
+        : conditions.length === 1
+          ? conditions[0]
+          : { and: conditions };
       const limit = options.limit ? parseInt(options.limit, 10) : 50;
 
       const result = await collection.query({

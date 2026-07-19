@@ -52,7 +52,10 @@ export async function resolveTaskPath(
   }
 
   // Fallback for filename-based title mode
-  const exactBasename = await queryTasks(collection, `file.basename == "${escaped}"`, 20);
+  const exactBasename = dedupeByPath([
+    ...await queryTasks(collection, `file.basename == "${escaped}"`, 20),
+    ...await queryTasks(collection, `file.name == "${escaped}.md"`, 20),
+  ]);
   if (exactBasename.length === 1) {
     return exactBasename[0].path;
   }
@@ -62,7 +65,10 @@ export async function resolveTaskPath(
 
   // Try fuzzy title/basename match
   const fuzzyTitle = await queryTasks(collection, `${titleField}.contains("${escaped}")`, 20);
-  const fuzzyBasename = await queryTasks(collection, `file.basename.contains("${escaped}")`, 20);
+  const fuzzyBasename = dedupeByPath([
+    ...await queryTasks(collection, `file.basename.contains("${escaped}")`, 20),
+    ...await queryTasks(collection, `file.name.contains("${escaped}")`, 20),
+  ]);
   const fuzzy = dedupeByPath([...fuzzyTitle, ...fuzzyBasename]);
 
   if (fuzzy.length === 1) {

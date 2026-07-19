@@ -2,7 +2,10 @@
 
 Standalone CLI for managing markdown tasks via [mdbase](https://mdbase.dev). Create, query, and manage tasks directly on markdown files using natural language.
 
-Works on the same vault and `_types/task.md` schema that the [TaskNotes](https://github.com/callumalpass/tasknotes) Obsidian plugin generates, or can initialize its own standalone collection.
+New collections use the mdbase v0.3 JSON Schema type format. Existing v0.2
+TaskNotes collections remain supported, so the CLI can share a vault with the
+[TaskNotes](https://github.com/callumalpass/tasknotes) Obsidian plugin during a
+staged migration.
 
 ## Install
 
@@ -75,8 +78,11 @@ Task text is parsed using [tasknotes-nlp-core](https://github.com/callumalpass/t
 - **Recurrence** — `every day`, `weekly`, `every monday`
 - **Estimates** — `~30m`, `~2h`
 
-The parser reads status and priority values from your collection's `_types/task.md`, so customizing the type definition changes what the parser accepts.
-For completion semantics, `mtn` also reads optional `tn_completed_values` on the status field (for example `tn_completed_values: [done, cancelled]`).
+The parser reads status and priority values from your collection's
+`_types/task.md`, so customizing the type definition changes what the parser
+accepts. In v0.3, TaskNotes field roles and completed status values live under
+the type file's root `x-tasknotes` extension. The legacy v0.2
+`tn_completed_values` field metadata remains supported.
 
 ## Collection path
 
@@ -89,22 +95,36 @@ Resolved in order:
 
 ## Using with TaskNotes
 
-If you use the [TaskNotes](https://github.com/callumalpass/tasknotes) Obsidian plugin with mdbase spec generation enabled, `mtn` works directly on your vault — point it at your vault root and it will read the same `mdbase.yaml` and `_types/task.md` the plugin generates. Tasks created by either tool are visible to both.
+If you use the [TaskNotes](https://github.com/callumalpass/tasknotes) Obsidian
+plugin with mdbase export enabled, point `mtn` at the vault root. Both tools read
+the same `mdbase.yaml`, task type, and Markdown records. Migrate copied data
+first with the mdbase CLI; do not partially rewrite a live collection by hand.
 
 ## Creating Tasks With Custom Paths
 
-`match.path_glob` and `path_pattern` do different jobs in `_types/task.md`:
+The v0.3 `match.path_glob` and `collection.path.pattern` settings do
+different jobs in `_types/task.md`:
 
-- `match.path_glob` tells mdbase which existing files should be treated as tasks.
-- `path_pattern` tells `mtn create` where to write a new task file.
+- `match.path_glob` tells mdbase which existing files should be
+  treated as tasks.
+- `collection.path.pattern` tells `mtn create` where to write a new task file.
 
 If your task type only has `match.path_glob`, listing existing tasks can work, but creating a new task without an explicit path cannot choose a filename. Add `path_pattern` for creation:
 
 ```yaml
-path_pattern: "calendar/{{year}}/{{month}}-{{monthNameShort}}/{{titleKebab}}.md"
-
+type: mdbase/type
+name: task
+schema:
+  $schema: https://json-schema.org/draft/2020-12/schema
+  type: object
+  properties:
+    title:
+      type: string
 match:
   path_glob: "calendar/**/*.md"
+collection:
+  path:
+    pattern: "calendar/{{year}}/{{month}}-{{monthNameShort}}/{{titleKebab}}.md"
 ```
 
 ## License

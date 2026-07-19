@@ -8,6 +8,10 @@
     "type": "git",
     "url": "https://github.com/callumalpass/mdbase-tasknotes.git"
   },
+  "bugs": {
+    "url": "https://github.com/callumalpass/mdbase-tasknotes/issues"
+  },
+  "homepage": "https://github.com/callumalpass/mdbase-tasknotes#readme",
   "keywords": [
     "mdbase",
     "tasks",
@@ -21,7 +25,10 @@
     "mtn": "./dist/cli.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsup",
@@ -32,13 +39,14 @@
     "prepublishOnly": "tsup"
   },
   "dependencies": {
-    "@callumalpass/mdbase": "^0.2.2",
-    "@tasknotes/model": "0.2.1",
+    "@callumalpass/mdbase": "file:../mdbase",
+    "@tasknotes/model": "file:../tasknotes-model",
     "chalk": "^4.1.2",
     "commander": "^12.1.0",
     "date-fns": "^4.1.0",
     "ora": "^5.4.1",
-    "rrule": "^2.8.1"
+    "rrule": "^2.8.1",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

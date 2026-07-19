@@ -8,6 +8,7 @@ import {
   resolveField,
   isCompletedStatus,
   getDefaultCompletedStatus,
+  normalizeTaskTypeDefinition,
   resolveDisplayTitle,
 } from "../../dist/field-mapping.js";
 
@@ -90,6 +91,42 @@ test("field mapping conformance: buildFieldMapping with tn_role annotations", as
   await t.test("displayNameKey uses provided display name key", () => {
     assert.equal(mapping.displayNameKey, "custom_title");
   });
+});
+
+test("field mapping conformance: v0.3 task contract normalization", () => {
+  const normalized = normalizeTaskTypeDefinition({
+    schema: {
+      dialect: "json-schema-2020-12",
+      value: {
+        type: "object",
+        properties: {
+          taskName: { type: "string" },
+          state: { enum: ["todo", "finished"] },
+          labels: { type: "array", items: { type: "string" } },
+        },
+      },
+    },
+    collection: {
+      display: { name_field: "taskName" },
+      read_defaults: { state: "todo" },
+    },
+    domain: {
+      "x-tasknotes": {
+        field_roles: { title: "taskName", status: "state", tags: "labels" },
+        status: { completed_values: ["finished"] },
+      },
+    },
+  });
+
+  assert.equal(normalized.displayNameKey, "taskName");
+  assert.deepEqual(normalized.fields.state.values, ["todo", "finished"]);
+  assert.equal(normalized.fields.state.default, "todo");
+  assert.deepEqual(normalized.fields.state.tn_completed_values, ["finished"]);
+  assert.deepEqual(normalized.fields.labels.items, { type: "string" });
+  const mapping = buildFieldMapping(normalized.fields, normalized.displayNameKey);
+  assert.equal(mapping.roleToField.title, "taskName");
+  assert.equal(mapping.roleToField.status, "state");
+  assert.deepEqual(mapping.completedStatuses, ["finished"]);
 });
 
 test("field mapping conformance: fallback behavior without tn_role", async (t) => {

@@ -6,7 +6,7 @@ import {
 } from "tasknotes-nlp-core";
 import { resolveCollectionPath } from "./config.js";
 import { validateDateString } from "./date.js";
-import { buildFieldMapping } from "./field-mapping.js";
+import { buildFieldMapping, normalizeTaskTypeDefinition } from "./field-mapping.js";
 
 export async function createParser(flagPath?: string): Promise<NaturalLanguageParserCore> {
   const collectionPath = resolveCollectionPath(flagPath);
@@ -22,8 +22,9 @@ export async function createParser(flagPath?: string): Promise<NaturalLanguagePa
     throw new Error(`Failed to load task type definition: ${typeResult.error?.message}`);
   }
 
-  const fields = typeResult.type.fields || {};
-  const mapping = buildFieldMapping(fields);
+  const normalized = normalizeTaskTypeDefinition(typeResult.type);
+  const fields = normalized.fields;
+  const mapping = buildFieldMapping(fields, normalized.displayNameKey);
 
   // Build StatusConfig from status enum values
   const statusConfigs: StatusConfig[] = [];

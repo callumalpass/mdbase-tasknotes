@@ -1,7 +1,11 @@
 import { format } from "date-fns";
 import type { Collection } from "@callumalpass/mdbase";
 import type { FieldMapping } from "./field-mapping.js";
-import { denormalizeFrontmatter, resolveField } from "./field-mapping.js";
+import {
+  denormalizeFrontmatter,
+  normalizeTaskTypeDefinition,
+  resolveField,
+} from "./field-mapping.js";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -12,6 +16,14 @@ interface TaskTypeDefLike {
     where?: Record<string, unknown>;
   };
   fields?: Record<string, { type?: string; default?: unknown }>;
+  collection?: {
+    path?: {
+      pattern?: string;
+      runtime?: string;
+      template?: string;
+      folder?: string;
+    };
+  };
 }
 
 interface CreateInputLike {
@@ -94,7 +106,10 @@ function getTaskTypeDef(collection: Collection): TaskTypeDefLike | undefined {
   if (!maybeCollection.typeDefs || typeof maybeCollection.typeDefs.get !== "function") {
     return undefined;
   }
-  return maybeCollection.typeDefs.get("task");
+  const taskType = maybeCollection.typeDefs.get("task");
+  if (!taskType) return undefined;
+  const normalized = normalizeTaskTypeDefinition(taskType);
+  return { ...taskType, fields: normalized.fields };
 }
 
 function applyTimestampDefaults(
@@ -189,19 +204,28 @@ function derivePathFromType(
   mapping: FieldMapping,
   now: Date,
 ): { path?: string; missingKeys?: string[]; template?: string; errorMessage?: string } {
-  if (!taskType || typeof taskType.path_pattern !== "string" || taskType.path_pattern.trim().length === 0) {
+  const pathMetadata = taskType?.collection?.path;
+  const genericPattern = readString(taskType?.path_pattern) ?? readString(pathMetadata?.pattern);
+  const runtimeTemplate = pathMetadata?.runtime === "tasknotes"
+    ? readString(pathMetadata.template)
+    : undefined;
+  const runtimeFolder = readString(pathMetadata?.folder);
+  const pathTemplate = genericPattern ?? (runtimeTemplate
+    ? [runtimeFolder, runtimeTemplate].filter(Boolean).join("/")
+    : undefined);
+  if (!taskType || !pathTemplate) {
     return {
       errorMessage: buildMissingPathPatternMessage(taskType),
     };
   }
 
   const values = buildTemplateValues(frontmatter, mapping, now);
-  const renderedPattern = renderTemplate(taskType.path_pattern, values);
+  const renderedPattern = renderTemplate(pathTemplate, values);
   if (renderedPattern.path) {
-    return { path: ensureMarkdownExt(renderedPattern.path), template: taskType.path_pattern };
+    return { path: ensureMarkdownExt(renderedPattern.path), template: pathTemplate };
   }
   return {
-    template: taskType.path_pattern,
+    template: pathTemplate,
     missingKeys: renderedPattern.missingKeys,
   };
 }
