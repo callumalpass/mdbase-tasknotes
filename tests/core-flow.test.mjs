@@ -18,7 +18,7 @@ test('core flow: init/create/list/complete/stats', () => {
 
   let result = runCli(['init', collectionPath]);
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.match(readFileSync(`${collectionPath}/mdbase.yaml`, 'utf8'), /0\.3\.0-alpha\.1/);
+  assert.match(readFileSync(`${collectionPath}/mdbase.yaml`, 'utf8'), /0\.3\.0/);
   const taskType = readFileSync(`${collectionPath}/_types/task.md`, 'utf8');
   assert.match(taskType, /kind: mdbase\.type/);
   assert.match(taskType, /dialect: json-schema-2020-12/);

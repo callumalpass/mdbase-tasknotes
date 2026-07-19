@@ -137,7 +137,7 @@ test("config/provider conformance: resolveCollectionPath precedence matrix", asy
                   ? resolve(env)
                   : cfg
                     ? resolve(cfg)
-                    : resolve(cwd);
+                    : process.cwd();
 
               assert.equal(mod.resolveCollectionPath(flag), expected);
             });

@@ -3,11 +3,8 @@ import * as path from "node:path";
 import * as os from "node:os";
 import type { CLIConfig } from "./types.js";
 
-const CONFIG_DIR = path.join(
-  os.homedir(),
-  ".config",
-  "mdbase-tasknotes",
-);
+const HOME_DIR = process.env.HOME || os.homedir();
+const CONFIG_DIR = path.join(HOME_DIR, ".config", "mdbase-tasknotes");
 const CONFIG_FILE = path.join(CONFIG_DIR, "config.json");
 
 const DEFAULT_CONFIG: CLIConfig = {
@@ -62,11 +59,11 @@ export function resolveCollectionPath(flagPath?: string): string {
 
 function expandHomeDirectory(userPath: string): string {
   if (userPath === "~") {
-    return os.homedir();
+    return HOME_DIR;
   }
 
   if (userPath.startsWith("~/") || userPath.startsWith("~\\")) {
-    return path.join(os.homedir(), userPath.slice(2));
+    return path.join(HOME_DIR, userPath.slice(2));
   }
 
   return userPath;
