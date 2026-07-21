@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Clarified that saved views are ordinary v0.3 records in this task-domain
+  client and that canonical named-view execution belongs to `mdbase view run`.
+- Corrected the custom-path example to use the canonical `mdbase.type` wrapper.
+
 ## 0.2.0-rc.1 - 2026-07-19
 
 - Generate mdbase v0.3 collections and canonical JSON Schema task types while

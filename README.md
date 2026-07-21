@@ -100,6 +100,11 @@ plugin with mdbase export enabled, point `mtn` at the vault root. Both tools rea
 the same `mdbase.yaml`, task type, and Markdown records. Migrate copied data
 first with the mdbase CLI; do not partially rewrite a live collection by hand.
 
+`mtn` is a task-domain client, not a general saved-view executor. It reads
+canonical `type: view` files as ordinary collection records through the shared
+core but does not advertise `view_records`; use `mdbase view run` for portable
+named-view execution.
+
 ## Creating Tasks With Custom Paths
 
 The v0.3 `match.path_glob` and `collection.path.pattern` settings do
@@ -109,17 +114,21 @@ different jobs in `_types/task.md`:
   treated as tasks.
 - `collection.path.pattern` tells `mtn create` where to write a new task file.
 
-If your task type only has `match.path_glob`, listing existing tasks can work, but creating a new task without an explicit path cannot choose a filename. Add `path_pattern` for creation:
+If your task type only has `match.path_glob`, listing existing tasks can work,
+but creating a new task without an explicit path cannot choose a filename. Add
+`collection.path.pattern` for creation:
 
 ```yaml
-type: mdbase/type
+kind: mdbase.type
 name: task
+version: 1
 schema:
-  $schema: https://json-schema.org/draft/2020-12/schema
-  type: object
-  properties:
-    title:
-      type: string
+  dialect: json-schema-2020-12
+  value:
+    type: object
+    properties:
+      title:
+        type: string
 match:
   path_glob: "calendar/**/*.md"
 collection:
