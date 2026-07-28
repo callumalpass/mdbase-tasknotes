@@ -41,13 +41,14 @@ test('init writes one complete, first-class TaskNotes data-contract installation
   );
   assert.deepEqual(
     { kind: contract.kind, id: contract.id, version: contract.version },
-    { kind: 'mdbase.contract', id: 'tasknotes.task', version: '0.2.0' },
+    { kind: 'mdbase.contract', id: 'tasknotes.task', version: '0.3.0-rc.1' },
   );
 
   const taskType = readMarkdownFrontmatter(join(collectionPath, '_types/task.md'));
   const implementation = taskType.implements.find(
     (candidate) =>
-      candidate.contract === 'tasknotes.task' && candidate.version === '0.2.0',
+      candidate.contract === 'tasknotes.task' &&
+      candidate.version === '0.3.0-rc.1',
   );
   assert.ok(implementation, 'task type must implement the exact TaskNotes contract');
   assert.equal(implementation.fields.completeInstances, 'completeInstances');
@@ -70,4 +71,3 @@ test('init writes one complete, first-class TaskNotes data-contract installation
   assert.equal(taskSchema.$schema, 'https://json-schema.org/draft/2020-12/schema');
   assert.equal(bindingSchema.$schema, 'https://json-schema.org/draft/2020-12/schema');
 });
-
