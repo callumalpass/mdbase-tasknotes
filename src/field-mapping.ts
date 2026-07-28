@@ -58,13 +58,16 @@ export function normalizeTaskTypeDefinition(value: unknown): NormalizedTaskType 
 		fields[fieldName].default = defaultValue;
 	}
 
-	const domain = isRecord(value.domain) ? value.domain : {};
-	const extension = isRecord(value["x-tasknotes"])
-		? value["x-tasknotes"]
-		: isRecord(domain["x-tasknotes"])
-			? domain["x-tasknotes"]
-			: {};
-	const roles = isRecord(extension.field_roles) ? extension.field_roles : {};
+	const implementation = Array.isArray(value.implements)
+		? value.implements.find((candidate) =>
+				isRecord(candidate) &&
+				candidate.contract === "tasknotes.task" &&
+				typeof candidate.version === "string"
+			)
+		: undefined;
+	const roles = isRecord(implementation) && isRecord(implementation.fields)
+		? implementation.fields
+		: {};
 	for (const [role, fieldNameValue] of Object.entries(roles)) {
 		const fieldName = typeString(fieldNameValue);
 		if (!fieldName) continue;
@@ -72,7 +75,10 @@ export function normalizeTaskTypeDefinition(value: unknown): NormalizedTaskType 
 		fields[fieldName].tn_role = role;
 	}
 
-	const status = isRecord(extension.status) ? extension.status : {};
+	const binding = isRecord(implementation) && isRecord(implementation.binding)
+		? implementation.binding
+		: {};
+	const status = isRecord(binding.status) ? binding.status : {};
 	const statusField = typeString(roles.status);
 	if (statusField && Array.isArray(status.completed_values)) {
 		fields[statusField] ??= {};

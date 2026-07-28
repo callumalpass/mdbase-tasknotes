@@ -945,13 +945,12 @@ function executeConfigValidateSchema(input: unknown): Envelope {
         return envelopeErr("templating.template_path missing");
       }
     }
-    if (value.failure_mode !== undefined && value.failure_mode !== "warning_fallback" && value.failure_mode !== "error_abort") {
+    if (value.failure_mode !== undefined && value.failure_mode !== "warning_fallback" && value.failure_mode !== "error") {
       return envelopeErr("templating.failure_mode invalid");
     }
     if (
       value.unknown_variable_policy !== undefined
       && value.unknown_variable_policy !== "preserve"
-      && value.unknown_variable_policy !== "error"
       && value.unknown_variable_policy !== "empty"
     ) {
       return envelopeErr("templating.unknown_variable_policy invalid");

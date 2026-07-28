@@ -80,9 +80,12 @@ Task text is parsed using [tasknotes-nlp-core](https://github.com/callumalpass/t
 
 The parser reads status and priority values from your collection's
 `_types/task.md`, so customizing the type definition changes what the parser
-accepts. In v0.3, TaskNotes field roles and completed status values live under
-the type file's root `x-tasknotes` extension. The legacy v0.2
-`tn_completed_values` field metadata remains supported.
+accepts. In v0.3, the type file declares that it `implements` the exact
+`tasknotes.task` contract version. Its field map says how collection-specific
+frontmatter becomes the portable TaskNotes task view, while its contract
+binding holds TaskNotes behavior such as completed status values. Multiple
+types can implement the same contract without requiring applications to know
+their stored field names.
 
 ## Collection path
 
@@ -100,6 +103,11 @@ plugin with mdbase export enabled, point `mtn` at the vault root. Both tools rea
 the same `mdbase.yaml`, task type, and Markdown records. Migrate copied data
 first with the mdbase CLI; do not partially rewrite a live collection by hand.
 
+`mtn` is a task-domain client, not a general saved-view executor. It reads
+canonical `type: view` files as ordinary collection records through the shared
+core but does not advertise `view_records`; use `mdbase view run` for portable
+named-view execution.
+
 ## Creating Tasks With Custom Paths
 
 The v0.3 `match.path_glob` and `collection.path.pattern` settings do
@@ -109,17 +117,21 @@ different jobs in `_types/task.md`:
   treated as tasks.
 - `collection.path.pattern` tells `mtn create` where to write a new task file.
 
-If your task type only has `match.path_glob`, listing existing tasks can work, but creating a new task without an explicit path cannot choose a filename. Add `path_pattern` for creation:
+If your task type only has `match.path_glob`, listing existing tasks can work,
+but creating a new task without an explicit path cannot choose a filename. Add
+`collection.path.pattern` for creation:
 
 ```yaml
-type: mdbase/type
+kind: mdbase.type
 name: task
+version: 1
 schema:
-  $schema: https://json-schema.org/draft/2020-12/schema
-  type: object
-  properties:
-    title:
-      type: string
+  dialect: json-schema-2020-12
+  value:
+    type: object
+    properties:
+      title:
+        type: string
 match:
   path_glob: "calendar/**/*.md"
 collection:
