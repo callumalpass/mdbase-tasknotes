@@ -40,8 +40,8 @@
     "prepublishOnly": "tsup"
   },
   "dependencies": {
-    "@callumalpass/mdbase": "0.3.0-rc.1",
-    "@tasknotes/model": "0.3.0-rc.1",
+    "@callumalpass/mdbase": "file:vendor/callumalpass-mdbase-0.3.0-rc.2.tgz",
+    "@tasknotes/model": "file:vendor/tasknotes-model-0.3.0-rc.3.tgz",
     "chalk": "^4.1.2",
     "commander": "^12.1.0",
     "date-fns": "^4.1.0",

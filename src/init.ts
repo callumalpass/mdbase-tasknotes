@@ -1,7 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { SUPPORTED_SPEC_VERSION } from "@callumalpass/mdbase";
-import YAML from "yaml";
+import { buildTaskNotesMdbaseResources } from "@tasknotes/model/mdbase";
 import { resolveUserPath } from "./config.js";
 
 export interface InitOptions {
@@ -21,186 +20,122 @@ const DEFAULTS: Required<InitOptions> = {
 };
 
 export function buildMdbaseYaml(): string {
-  return YAML.stringify({
-    spec_version: SUPPORTED_SPEC_VERSION,
-    name: "TaskNotes",
-    description: "Task collection managed by mdbase-tasknotes",
-    settings: {
-      types_folder: "_types",
-      validation: "warn",
-      explicit_type_keys: ["type", "types"],
-    },
-  }, { lineWidth: 0 });
+  return buildInitResources().configDocument;
 }
 
 export function buildTaskTypeDef(opts: InitOptions = {}): string {
   const o = { ...DEFAULTS, ...opts };
-  const completedStatuses = o.statuses.filter((s) => {
-    const lower = s.toLowerCase();
-    return lower.includes("done") || lower.includes("complete") || lower.includes("cancel");
-  });
-  const roleNames = [
-    "title", "status", "priority", "due", "scheduled", "completedDate",
-    "tags", "contexts", "projects", "timeEstimate", "dateCreated",
-    "dateModified", "recurrence", "recurrenceAnchor", "completeInstances",
-    "skippedInstances", "timeEntries",
-  ];
-  const fieldRoles = Object.fromEntries(roleNames.map((role) => [role, role]));
-  const dateArray = { type: "array", items: { type: "string", format: "date" } };
-  const frontmatter = {
-    kind: "mdbase.type",
-    name: "task",
-    version: 1,
-    description: "A task managed by mdbase-tasknotes.",
-    match: { path_glob: `${o.tasksFolder}/**/*.md` },
-    schema: {
-      dialect: "json-schema-2020-12",
-      value: {
-        $schema: "https://json-schema.org/draft/2020-12/schema",
-        type: "object",
-        additionalProperties: true,
-        required: ["type", "title", "status", "dateCreated"],
-        properties: {
-          type: { const: "task" },
-          title: { type: "string", minLength: 1 },
-          status: { enum: o.statuses, default: o.defaultStatus },
-          priority: { enum: o.priorities, default: o.defaultPriority },
-          due: { type: "string", format: "date" },
-          scheduled: { type: "string", format: "date" },
-          completedDate: { type: "string", format: "date" },
-          tags: { type: "array", items: { type: "string" } },
-          contexts: { type: "array", items: { type: "string" } },
-          projects: {
-            type: "array",
-            items: { type: "string" },
-            description: "Wikilinks to related project notes.",
-          },
-          timeEstimate: {
-            type: "integer",
-            minimum: 0,
-            description: "Estimated time in minutes.",
-          },
-          dateCreated: { type: "string", format: "date-time" },
-          dateModified: { type: "string", format: "date-time" },
-          recurrence: { type: "string" },
-          recurrenceAnchor: { enum: ["scheduled", "completion"] },
-          completeInstances: dateArray,
-          skippedInstances: dateArray,
-          timeEntries: {
-            type: "array",
-            items: {
-              type: "object",
-              additionalProperties: true,
-              properties: {
-                startTime: { type: "string", format: "date-time" },
-                endTime: { type: "string", format: "date-time" },
-                description: { type: "string" },
-                duration: { type: "integer" },
-              },
-            },
-          },
-        },
-      },
-    },
+  return buildInitResources(o).typeDocument;
+}
+
+function buildInitResources(opts: InitOptions = {}) {
+  const o = { ...DEFAULTS, ...opts };
+  return buildTaskNotesMdbaseResources({
+    tasksFolder: o.tasksFolder,
     collection: {
-      display: { name_field: "title" },
-      read_defaults: {
+      name: "TaskNotes",
+      description: "Task collection managed by mdbase-tasknotes",
+      validation: "warn",
+    },
+    path: {
+      template: "{{title}}",
+      runtime: "tasknotes",
+      generatedBy: "tasknotes.filename.create",
+    },
+    title: {
+      filenameFormat: "title",
+    },
+    modelConfig: {
+      fieldMapping: {
+        recurrenceAnchor: "recurrenceAnchor",
+        recurrenceParent: "recurrenceParent",
+        occurrenceDate: "occurrenceDate",
+        occurrenceMaterialization: "occurrenceMaterialization",
+        occurrenceNextTrigger: "occurrenceNextTrigger",
+        occurrenceTemplate: "occurrenceTemplate",
+        occurrencePastHorizon: "occurrencePastHorizon",
+        occurrenceFutureHorizon: "occurrenceFutureHorizon",
+        completeInstances: "completeInstances",
+        skippedInstances: "skippedInstances",
+      },
+      statuses: o.statuses.map((value, order) => {
+        const lower = value.toLowerCase();
+        const isCompleted =
+          lower.includes("done") ||
+          lower.includes("complete");
+        const isSkipped = lower.includes("cancel") || lower.includes("skip");
+        return {
+          id: value,
+          value,
+          label: value,
+          color: "",
+          isCompleted,
+          ...(isSkipped ? { isSkipped: true } : {}),
+          order,
+          autoArchive: false,
+          autoArchiveDelay: 0,
+        };
+      }),
+      priorities: o.priorities.map((value, weight) => ({
+        id: value,
+        value,
+        label: value,
+        color: "",
+        weight,
+      })),
+      defaults: {
         status: o.defaultStatus,
         priority: o.defaultPriority,
       },
-      links: {
-        "projects[]": { target_type: "any", validate_exists: false },
-      },
-      path: { pattern: `${o.tasksFolder}/{title}.md` },
     },
-    lifecycle: {
-      on_create: {
-        set: {
-          dateCreated: { now: true },
-          dateModified: { now: true },
-        },
-      },
-      on_update: { set: { dateModified: { now: true } } },
-    },
-    "x-tasknotes": {
-      contract: "tasknotes.task",
-      version: 1,
-      field_roles: fieldRoles,
-      status: {
-        completed_values: completedStatuses,
-        default: o.defaultStatus,
-      },
-      priority: { default: o.defaultPriority },
-      archive: { tags_field: "tags", archived_tag: "archived" },
-    },
-  };
+  });
+}
 
-  return [
-    "---",
-    YAML.stringify(frontmatter, { lineWidth: 0 }).trimEnd(),
-    "---",
-    "",
-    "# Task",
-    "",
-    "Type definition for tasks managed by mdbase-tasknotes.",
-    "",
-  ].join("\n");
+function writeCollectionResources(
+  targetPath: string,
+  force: boolean,
+): { created: string[] } {
+  const absPath = resolveUserPath(targetPath);
+  const resources = buildInitResources();
+  const files = [
+    [resources.paths.config, resources.configDocument],
+    [resources.paths.contract, resources.contractDocument],
+    [resources.paths.type, resources.typeDocument],
+    [resources.paths.taskSchema, resources.taskSchemaDocument],
+    [resources.paths.bindingSchema, resources.bindingSchemaDocument],
+  ] as const;
+
+  if (!force) {
+    const existing = files.find(([relativePath]) =>
+      fs.existsSync(path.join(absPath, relativePath))
+    );
+    if (existing) {
+      throw new Error(
+        `${existing[0]} already exists at ${absPath}. Use --force to overwrite.`,
+      );
+    }
+  }
+
+  fs.mkdirSync(absPath, { recursive: true });
+  for (const [relativePath, document] of files) {
+    const destination = path.join(absPath, relativePath);
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.writeFileSync(destination, document);
+  }
+
+  fs.mkdirSync(path.join(absPath, resources.paths.records), { recursive: true });
+  return {
+    created: [
+      ...files.map(([relativePath]) => relativePath),
+      `${resources.paths.records}/`,
+    ],
+  };
 }
 
 export async function initCollection(targetPath: string): Promise<{ created: string[] }> {
-  const absPath = resolveUserPath(targetPath);
-  const typesDir = path.join(absPath, "_types");
-  const mdbaseYamlPath = path.join(absPath, "mdbase.yaml");
-  const taskTypeDefPath = path.join(typesDir, "task.md");
-
-  const created: string[] = [];
-
-  // Create directories
-  fs.mkdirSync(absPath, { recursive: true });
-  fs.mkdirSync(typesDir, { recursive: true });
-
-  // Create tasks folder
-  const tasksDir = path.join(absPath, "tasks");
-  fs.mkdirSync(tasksDir, { recursive: true });
-
-  // Write mdbase.yaml
-  if (fs.existsSync(mdbaseYamlPath)) {
-    throw new Error(`mdbase.yaml already exists at ${absPath}. Use --force to overwrite.`);
-  }
-  fs.writeFileSync(mdbaseYamlPath, buildMdbaseYaml());
-  created.push("mdbase.yaml");
-
-  // Write _types/task.md
-  if (fs.existsSync(taskTypeDefPath)) {
-    throw new Error(`_types/task.md already exists at ${absPath}. Use --force to overwrite.`);
-  }
-  fs.writeFileSync(taskTypeDefPath, buildTaskTypeDef());
-  created.push("_types/task.md");
-
-  created.push("tasks/");
-
-  return { created };
+  return writeCollectionResources(targetPath, false);
 }
 
 export async function initCollectionForce(targetPath: string): Promise<{ created: string[] }> {
-  const absPath = resolveUserPath(targetPath);
-  const typesDir = path.join(absPath, "_types");
-  const mdbaseYamlPath = path.join(absPath, "mdbase.yaml");
-  const taskTypeDefPath = path.join(typesDir, "task.md");
-
-  const created: string[] = [];
-
-  fs.mkdirSync(absPath, { recursive: true });
-  fs.mkdirSync(typesDir, { recursive: true });
-  fs.mkdirSync(path.join(absPath, "tasks"), { recursive: true });
-
-  fs.writeFileSync(mdbaseYamlPath, buildMdbaseYaml());
-  created.push("mdbase.yaml");
-
-  fs.writeFileSync(taskTypeDefPath, buildTaskTypeDef());
-  created.push("_types/task.md");
-
-  created.push("tasks/");
-
-  return { created };
+  return writeCollectionResources(targetPath, true);
 }

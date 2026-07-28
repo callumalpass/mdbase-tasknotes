@@ -80,9 +80,12 @@ Task text is parsed using [tasknotes-nlp-core](https://github.com/callumalpass/t
 
 The parser reads status and priority values from your collection's
 `_types/task.md`, so customizing the type definition changes what the parser
-accepts. In v0.3, TaskNotes field roles and completed status values live under
-the type file's root `x-tasknotes` extension. The legacy v0.2
-`tn_completed_values` field metadata remains supported.
+accepts. In v0.3, the type file declares that it `implements` the exact
+`tasknotes.task` contract version. Its field map says how collection-specific
+frontmatter becomes the portable TaskNotes task view, while its contract
+binding holds TaskNotes behavior such as completed status values. Multiple
+types can implement the same contract without requiring applications to know
+their stored field names.
 
 ## Collection path
 

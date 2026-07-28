@@ -110,12 +110,12 @@ test("field mapping conformance: v0.3 task contract normalization", () => {
       display: { name_field: "taskName" },
       read_defaults: { state: "todo" },
     },
-    domain: {
-      "x-tasknotes": {
-        field_roles: { title: "taskName", status: "state", tags: "labels" },
-        status: { completed_values: ["finished"] },
-      },
-    },
+    implements: [{
+      contract: "tasknotes.task",
+      version: "0.2.0",
+      fields: { title: "taskName", status: "state", tags: "labels" },
+      binding: { status: { completed_values: ["finished"] } },
+    }],
   });
 
   assert.equal(normalized.displayNameKey, "taskName");
@@ -155,8 +155,8 @@ test("field mapping conformance: fallback behavior without tn_role", async (t) =
     assert.equal(mapping.displayNameKey, mapping.roleToField.title);
   });
 
-  await t.test("completed statuses inferred by keyword when no tn_completed_values", () => {
-    assert.deepEqual(mapping.completedStatuses, ["finished"]);
+  await t.test("unannotated statuses use the TaskNotes compatibility defaults", () => {
+    assert.deepEqual(mapping.completedStatuses, ["done", "cancelled"]);
   });
 });
 
