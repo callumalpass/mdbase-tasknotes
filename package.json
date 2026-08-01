@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "@callumalpass/mdbase": "file:vendor/callumalpass-mdbase-0.3.0-rc.4.tgz",
-    "@tasknotes/model": "file:vendor/tasknotes-model-0.3.0-rc.5.tgz",
+    "@tasknotes/model": "0.3.0-rc.5",
     "chalk": "^4.1.2",
     "commander": "^12.1.0",
     "date-fns": "^4.1.0",
