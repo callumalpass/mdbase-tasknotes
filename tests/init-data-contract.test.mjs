@@ -17,9 +17,18 @@ test('init writes one complete, first-class TaskNotes data-contract installation
   const result = runCli(['init', collectionPath]);
   assert.equal(result.status, 0, result.stderr || result.stdout);
 
+  // The contract file location is owned by @tasknotes/model (it moved from
+  // _contracts/tasknotes.task.md to _contracts/tasknotes.task/<version>.md), so
+  // take it from what init reports instead of hard-coding it.
+  const contractPath = result.stdout
+    .split('\n')
+    .map((line) => line.trim())
+    .find((line) => line.startsWith('_contracts/') && line.endsWith('.md'));
+  assert.ok(contractPath, `init must report a contract file:\n${result.stdout}`);
+
   const expectedPaths = [
     'mdbase.yaml',
-    '_contracts/tasknotes.task.md',
+    contractPath,
     '_types/task.md',
     '_schemas/tasknotes/tasknotes-task.schema.json',
     '_schemas/tasknotes/tasknotes-task-binding.schema.json',
@@ -36,19 +45,18 @@ test('init writes one complete, first-class TaskNotes data-contract installation
   const config = YAML.parse(readFileSync(join(collectionPath, 'mdbase.yaml'), 'utf8'));
   assert.equal(config.settings.contracts_folder, '_contracts');
 
-  const contract = readMarkdownFrontmatter(
-    join(collectionPath, '_contracts/tasknotes.task.md'),
-  );
+  const contract = readMarkdownFrontmatter(join(collectionPath, contractPath));
   assert.deepEqual(
-    { kind: contract.kind, id: contract.id, version: contract.version },
-    { kind: 'mdbase.contract', id: 'tasknotes.task', version: '0.3.0-rc.1' },
+    { kind: contract.kind, id: contract.id },
+    { kind: 'mdbase.contract', id: 'tasknotes.task' },
   );
+  assert.match(contract.version, /^0\.3\.\d+(?:-[0-9A-Za-z.-]+)?$/);
 
   const taskType = readMarkdownFrontmatter(join(collectionPath, '_types/task.md'));
   const implementation = taskType.implements.find(
     (candidate) =>
       candidate.contract === 'tasknotes.task' &&
-      candidate.version === '0.3.0-rc.1',
+      candidate.version === contract.version,
   );
   assert.ok(implementation, 'task type must implement the exact TaskNotes contract');
   assert.equal(implementation.fields.completeInstances, 'completeInstances');

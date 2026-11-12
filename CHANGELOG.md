@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Read TaskNotes v5 collections (mdbase spec 0.3 with `implements` type
+  bindings): `create`, `update`, `complete` and `skip` write the bound field
+  names, including when completing one instance of a recurring task (#20).
+- Use the published `@callumalpass/mdbase` 0.3.0-rc.9 and `@tasknotes/model`
+  0.3.0-rc.21 (the versions TaskNotes 5.0.0-beta.7 uses) instead of a vendored
+  tarball. `mtn init` now writes the contract to
+  `_contracts/tasknotes.task/<version>.md`.
+- Update `fast-uri` to clear its production advisories.
+- `mtn archive` adds the tag the task type binds (`archive.archived_tag` in
+  the `tasknotes.task` binding) instead of always `archive`; types without a
+  binding (v0.2) keep `archive`. `mtn list` hides tasks with that tag too.
+  Thanks @Lorite (#20).
 - Clarified that saved views are ordinary v0.3 records in this task-domain
   client and that canonical named-view execution belongs to `mdbase view run`.
 - Corrected the custom-path example to use the canonical `mdbase.type` wrapper.

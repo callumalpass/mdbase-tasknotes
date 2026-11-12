@@ -54,7 +54,7 @@ mtn timer log --period today
 | `mtn complete <task>` | Mark a task as done (`--date YYYY-MM-DD` for recurring instance completion) |
 | `mtn update <task>` | Update fields (`--status`, `--priority`, `--due`, `--title`, `--add-tag`, `--remove-tag`) |
 | `mtn delete <task>` | Delete a task (`--force` to skip backlink check) |
-| `mtn archive <task>` | Add archive tag to a task |
+| `mtn archive <task>` | Add the archive tag to a task (the type's `archive.archived_tag` binding, else `archive`) |
 | `mtn skip <task>` | Skip a recurring instance (`--date YYYY-MM-DD`, default today) |
 | `mtn unskip <task>` | Unskip a recurring instance (`--date YYYY-MM-DD`, default today) |
 | `mtn search <query>` | Full-text search across tasks |

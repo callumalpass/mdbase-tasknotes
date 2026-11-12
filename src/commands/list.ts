@@ -6,6 +6,7 @@ import {
   resolveDisplayTitle,
   resolveField,
   isCompletedStatus,
+  loadArchiveTag,
 } from "../field-mapping.js";
 import type { TaskResult } from "../types.js";
 import { isBeforeDateSafe, resolveDateOrToday, validateDateString } from "../date.js";
@@ -29,7 +30,8 @@ export async function listCommand(options: {
       ? await resolveDueDateExpression(options.due, options.path)
       : undefined;
     const requestedTag = typeof options.tag === "string" ? options.tag.trim().toLowerCase() : "";
-    const wantsArchivedTag = requestedTag === "archive" || requestedTag === "archived";
+    const archiveTags = [...new Set(["archive", "archived", await loadArchiveTag(options.path)])];
+    const wantsArchivedTag = archiveTags.some((tag) => tag.toLowerCase() === requestedTag);
     await withCollection(async (collection, mapping) => {
       // Build where expression from flags
       const conditions: Array<string | Record<string, unknown>> = [];
@@ -65,8 +67,9 @@ export async function listCommand(options: {
         }
 
         if (!options.status && !options.overdue && !wantsArchivedTag) {
-          conditions.push({ not: { [tagsField]: { contains: "archive" } } });
-          conditions.push({ not: { [tagsField]: { contains: "archived" } } });
+          for (const tag of archiveTags) {
+            conditions.push({ not: { [tagsField]: { contains: tag } } });
+          }
         }
 
         if (dueDate) {
