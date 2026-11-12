@@ -125,7 +125,7 @@ program
 // Archive
 program
   .command("archive <pathOrTitle>")
-  .description("Archive a task (add archive tag)")
+  .description("Archive a task (add the archive tag)")
   .action((pathOrTitle: string) => {
     const parentOpts = program.opts();
     return archiveCommand(pathOrTitle, { path: parentOpts.path });

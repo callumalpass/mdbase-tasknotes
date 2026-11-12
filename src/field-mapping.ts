@@ -17,7 +17,12 @@ export type FieldMapping = SpecFieldMapping;
 export interface NormalizedTaskType {
 	fields: Record<string, Record<string, unknown>>;
 	displayNameKey?: string;
+	/** `implements[tasknotes.task].binding.archive.archived_tag`, when set. */
+	archiveTag?: string;
 }
+
+/** The tag `mtn archive` adds when the task type does not bind one. */
+export const DEFAULT_ARCHIVE_TAG = "archive";
 
 export function defaultFieldMapping(): FieldMapping {
 	return defaultSpecFieldMapping();
@@ -85,10 +90,14 @@ export function normalizeTaskTypeDefinition(value: unknown): NormalizedTaskType 
 		fields[statusField].tn_completed_values = status.completed_values;
 	}
 
+	const archive = isRecord(binding.archive) ? binding.archive : {};
+	const archiveTag = typeString(archive.archived_tag)?.trim();
+
 	const display = isRecord(collection.display) ? collection.display : {};
 	return {
 		fields,
 		displayNameKey: typeString(display.name_field),
+		...(archiveTag ? { archiveTag } : {}),
 	};
 }
 
@@ -103,22 +112,29 @@ export function getDefaultCompletedStatus(mapping: FieldMapping): string {
 	return getDefaultSpecCompletedStatus(mapping);
 }
 
-export async function loadFieldMapping(flagPath?: string): Promise<FieldMapping> {
+async function loadTaskType(flagPath?: string): Promise<NormalizedTaskType | undefined> {
 	try {
 		const collectionPath = resolveCollectionPath(flagPath);
 		const configResult = await loadConfig(collectionPath);
-		if (!configResult.valid || !configResult.config) {
-			return defaultFieldMapping();
-		}
+		if (!configResult.valid || !configResult.config) return undefined;
 		const typeResult = await getType(collectionPath, configResult.config, "task");
-		if (!typeResult.valid || !typeResult.type) {
-			return defaultFieldMapping();
-		}
-		const normalized = normalizeTaskTypeDefinition(typeResult.type);
-		return buildFieldMapping(normalized.fields, normalized.displayNameKey);
+		if (!typeResult.valid || !typeResult.type) return undefined;
+		return normalizeTaskTypeDefinition(typeResult.type);
 	} catch {
-		return defaultFieldMapping();
+		return undefined;
 	}
+}
+
+export async function loadFieldMapping(flagPath?: string): Promise<FieldMapping> {
+	const normalized = await loadTaskType(flagPath);
+	return normalized
+		? buildFieldMapping(normalized.fields, normalized.displayNameKey)
+		: defaultFieldMapping();
+}
+
+/** The archive tag the task type binds, or DEFAULT_ARCHIVE_TAG. */
+export async function loadArchiveTag(flagPath?: string): Promise<string> {
+	return (await loadTaskType(flagPath))?.archiveTag ?? DEFAULT_ARCHIVE_TAG;
 }
 
 export function normalizeFrontmatter(

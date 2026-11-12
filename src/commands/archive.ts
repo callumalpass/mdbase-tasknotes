@@ -1,12 +1,18 @@
 import { withCollection, resolveTaskPath } from "../collection.js";
 import { showError, showSuccess } from "../format.js";
-import { normalizeFrontmatter, denormalizeFrontmatter, resolveDisplayTitle } from "../field-mapping.js";
+import {
+  normalizeFrontmatter,
+  denormalizeFrontmatter,
+  resolveDisplayTitle,
+  loadArchiveTag,
+} from "../field-mapping.js";
 
 export async function archiveCommand(
   pathOrTitle: string,
   options: { path?: string },
 ): Promise<void> {
   try {
+    const archiveTag = await loadArchiveTag(options.path);
     await withCollection(async (collection, mapping) => {
       const taskPath = await resolveTaskPath(collection, pathOrTitle, mapping);
       const read = await collection.read(taskPath);
@@ -20,12 +26,12 @@ export async function archiveCommand(
       const taskTitle = resolveDisplayTitle(fm, mapping, taskPath) || taskPath;
       const tags = Array.isArray(fm.tags) ? [...(fm.tags as string[])] : [];
 
-      if (tags.includes("archive")) {
+      if (tags.includes(archiveTag)) {
         showSuccess(`Task "${taskTitle}" is already archived.`);
         return;
       }
 
-      tags.push("archive");
+      tags.push(archiveTag);
 
       const result = await collection.update({
         path: taskPath,
