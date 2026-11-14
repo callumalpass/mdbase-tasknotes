@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0-rc.2 - 2026-11-14
 
 - Read TaskNotes v5 collections (mdbase spec 0.3 with `implements` type
   bindings): `create`, `update`, `complete` and `skip` write the bound field
