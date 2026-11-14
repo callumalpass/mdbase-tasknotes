@@ -1,9 +1,10 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 const packageRoot = resolve(import.meta.dirname, "..");
+const expectedVersion = JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8")).version;
 const tempRoot = mkdtempSync(join(tmpdir(), "mdbase-tasknotes-package-smoke-"));
 let tarball;
 
@@ -38,7 +39,7 @@ try {
     cwd: tempRoot,
     encoding: "utf8",
   }).trim();
-  if (version !== "0.2.0-rc.1") {
+  if (version !== expectedVersion) {
     throw new Error(`Unexpected installed CLI version: ${version}`);
   }
 } finally {
