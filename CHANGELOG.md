@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- `mtn archive` moves the task into the archive folder when TaskNotes is set to
+  (`move_on_archive` and `archive_folder` in `_settings/dev.tasknotes.md`, or
+  in an older task type's `archive` binding). An empty folder means
+  `TaskNotes/Archive`, and TaskNotes folder variables such as `{{year}}` work.
+  It refuses to overwrite an existing file and does not rewrite links in other
+  notes (#20).
+- New `mtn unarchive` removes the archive tag and, when moving is on, moves the
+  task back to the task type's folder.
+
 ## 0.2.0-rc.2 - 2026-11-14
 
 - Read TaskNotes v5 collections (mdbase spec 0.3 with `implements` type

@@ -496,3 +496,23 @@ function joinPath(folder: string, fileName: string): string {
 function hasValue(value: unknown): boolean {
   return value !== null && value !== undefined;
 }
+
+/**
+ * Render a TaskNotes folder template such as `Archive/{{year}}/{{project}}`
+ * for a task. As in TaskNotes, a variable without a value renders empty and
+ * the empty segment is dropped. Returns undefined when the result would leave
+ * the collection.
+ */
+export function renderFolderTemplate(
+  template: string,
+  frontmatter: UnknownRecord,
+  mapping: FieldMapping,
+  now: Date = new Date(),
+): string | undefined {
+  const values = buildTemplateValues(frontmatter, mapping, now);
+  const rendered = template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => values[key] ?? "");
+  const normalized = normalizeRelativePath(rendered);
+  if (normalized.split("/").some((segment) => segment === ".." || segment === ".")) return undefined;
+  if (normalized.includes("\0")) return undefined;
+  return normalized;
+}
