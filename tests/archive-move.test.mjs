@@ -39,9 +39,13 @@ function makeRc5Collection({ moveOnArchive, folder }) {
   const root = makeTempDir('mtn-archive-rc5-');
   cpSync(RC5_FIXTURE, root, { recursive: true });
   const typePath = join(root, '_types/task.md');
-  const type = readFileSync(typePath, 'utf8')
+  // Normalise line endings: Git may check the fixture out with CRLF (Windows).
+  const original = readFileSync(typePath, 'utf8').replace(/\r\n/g, '\n');
+  const type = original
     .replace('        move_on_archive: false\n', `        move_on_archive: ${moveOnArchive}\n`)
     .replace('        folder: TaskNotes/Archive\n', `        folder: ${folder}\n`);
+  assert.equal(type.includes(`move_on_archive: ${moveOnArchive}\n`), true, 'fixture edit must apply');
+  assert.equal(type.includes(`folder: ${folder}\n`), true, 'fixture edit must apply');
   writeFileSync(typePath, type);
   mkdirSync(join(root, 'Work/Actions'), { recursive: true });
   writeFileSync(
