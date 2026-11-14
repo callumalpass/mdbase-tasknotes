@@ -54,7 +54,8 @@ mtn timer log --period today
 | `mtn complete <task>` | Mark a task as done (`--date YYYY-MM-DD` for recurring instance completion) |
 | `mtn update <task>` | Update fields (`--status`, `--priority`, `--due`, `--title`, `--add-tag`, `--remove-tag`) |
 | `mtn delete <task>` | Delete a task (`--force` to skip backlink check) |
-| `mtn archive <task>` | Add the archive tag to a task (the type's `archive.archived_tag` binding, else `archive`) |
+| `mtn archive <task>` | Add the archive tag to a task, and move it to the archive folder if TaskNotes is set to (see [Archiving](#archiving)) |
+| `mtn unarchive <task>` | Remove the archive tag, and move the task back to the tasks folder if TaskNotes is set to |
 | `mtn skip <task>` | Skip a recurring instance (`--date YYYY-MM-DD`, default today) |
 | `mtn unskip <task>` | Unskip a recurring instance (`--date YYYY-MM-DD`, default today) |
 | `mtn search <query>` | Full-text search across tasks |
@@ -107,6 +108,33 @@ first with the mdbase CLI; do not partially rewrite a live collection by hand.
 canonical `type: view` files as ordinary collection records through the shared
 core but does not advertise `view_records`; use `mdbase view run` for portable
 named-view execution.
+
+## Archiving
+
+`mtn archive` adds the archive tag: the task type's `archive.archived_tag`
+binding (TaskNotes uses `archived`), or `archive` for a type without a
+TaskNotes binding. `mtn list` hides archived tasks unless you filter by that tag.
+
+If TaskNotes is set to move archived tasks, `mtn archive` also moves the file,
+keeping its name. `mtn` reads the setting from TaskNotes' collection settings
+record, `_settings/dev.tasknotes.md` (`move_on_archive`, `archive_folder`), and
+otherwise from older task types that keep them under the binding's `archive`
+(`move_on_archive`, `folder`). As in TaskNotes:
+
+- An empty `archive_folder` means `TaskNotes/Archive`.
+- The folder can use TaskNotes' folder variables, such as
+  `Archive/{{year}}/{{project}}`. A variable without a value is dropped.
+- `mtn unarchive` removes the tag and moves the file back to the task type's
+  folder (`collection.path.folder`). A task already somewhere inside that folder
+  stays where it is, and so does every task when the type names no folder.
+
+Unlike TaskNotes, `mtn` never archives without moving when moving is on: if a
+file with the same name is already in the destination, it stops with an error
+and changes nothing.
+
+Links in other notes are not rewritten. `[[Task name]]` links still resolve,
+because the file name does not change; links that include the folder, such as
+`[[tasks/Task name]]`, need updating by hand or by Obsidian.
 
 ## Creating Tasks With Custom Paths
 

@@ -7,7 +7,7 @@ import { showCommand } from "./commands/show.js";
 import { completeCommand } from "./commands/complete.js";
 import { updateCommand } from "./commands/update.js";
 import { deleteCommand } from "./commands/delete.js";
-import { archiveCommand } from "./commands/archive.js";
+import { archiveCommand, unarchiveCommand } from "./commands/archive.js";
 import { searchCommand } from "./commands/search.js";
 import {
   timerStartCommand,
@@ -125,10 +125,22 @@ program
 // Archive
 program
   .command("archive <pathOrTitle>")
-  .description("Archive a task (add the archive tag)")
+  .description(
+    "Archive a task: add the archive tag, and move it to the archive folder when TaskNotes' move_on_archive setting is on",
+  )
   .action((pathOrTitle: string) => {
     const parentOpts = program.opts();
     return archiveCommand(pathOrTitle, { path: parentOpts.path });
+  });
+
+program
+  .command("unarchive <pathOrTitle>")
+  .description(
+    "Unarchive a task: remove the archive tag, and move it back to the tasks folder when move_on_archive is on",
+  )
+  .action((pathOrTitle: string) => {
+    const parentOpts = program.opts();
+    return unarchiveCommand(pathOrTitle, { path: parentOpts.path });
   });
 
 // Skip recurring instance

@@ -112,17 +112,36 @@ export function getDefaultCompletedStatus(mapping: FieldMapping): string {
 	return getDefaultSpecCompletedStatus(mapping);
 }
 
-async function loadTaskType(flagPath?: string): Promise<NormalizedTaskType | undefined> {
+/** The `task` type definition as mdbase loads it, before normalization. */
+export async function loadRawTaskType(flagPath?: string): Promise<Record<string, unknown> | undefined> {
 	try {
 		const collectionPath = resolveCollectionPath(flagPath);
 		const configResult = await loadConfig(collectionPath);
 		if (!configResult.valid || !configResult.config) return undefined;
 		const typeResult = await getType(collectionPath, configResult.config, "task");
 		if (!typeResult.valid || !typeResult.type) return undefined;
-		return normalizeTaskTypeDefinition(typeResult.type);
+		return isRecord(typeResult.type) ? typeResult.type : undefined;
 	} catch {
 		return undefined;
 	}
+}
+
+async function loadTaskType(flagPath?: string): Promise<NormalizedTaskType | undefined> {
+	const raw = await loadRawTaskType(flagPath);
+	return raw ? normalizeTaskTypeDefinition(raw) : undefined;
+}
+
+/** The type's `implements` entry for the tasknotes.task contract, if any. */
+export function findTaskNotesImplementation(
+	type: Record<string, unknown> | undefined
+): Record<string, unknown> | undefined {
+	if (!type || !Array.isArray(type.implements)) return undefined;
+	const found = type.implements.find((candidate) =>
+		isRecord(candidate) &&
+		candidate.contract === "tasknotes.task" &&
+		typeof candidate.version === "string"
+	);
+	return isRecord(found) ? found : undefined;
 }
 
 export async function loadFieldMapping(flagPath?: string): Promise<FieldMapping> {
