@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0-rc.3 - 2026-11-15
 
 - `mtn archive` moves the task into the archive folder when TaskNotes is set to
   (`move_on_archive` and `archive_folder` in `_settings/dev.tasknotes.md`, or
