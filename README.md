@@ -1,3 +1,5 @@
+> **Archived (November 2026).** This CLI targets the legacy mdbase engines and is no longer maintained. For TaskNotes, use the [TaskNotes Obsidian plugin](https://github.com/callumalpass/tasknotes) or the TaskNotes app at [tasknotes.dev](https://tasknotes.dev).
+
 # mdbase-tasknotes
 
 Standalone CLI for managing markdown tasks via [mdbase](https://mdbase.dev). Create, query, and manage tasks directly on markdown files using natural language.
